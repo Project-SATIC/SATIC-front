@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gestão de salas de aula, laboratórios e infraestrutura física do Instituto de Computação UFAL.">
+    <title>SATIC | Salas e laboratórios</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+
+<body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo principal</a>
+
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Navegação principal">
+            <a class="brand" href="index.html" aria-label="SATIC, página inicial">
+                <span class="brand-mark" aria-hidden="true">S</span>
+                <span>
+                    <strong>SATIC</strong>
+                    <small>Instituto de Computação · UFAL</small>
+                </span>
+            </a>
+
+            <div class="sidebar-context" aria-label="Contexto do semestre ativo">
+                <div class="sidebar-context-row">
+                    <span><span class="status-dot warning" aria-hidden="true"></span><strong>Semestre 2026.2</strong></span>
+                    <span>Em montagem</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav-wrap" aria-label="Menu do sistema">
+                <div class="nav-group">
+                    <p class="nav-label">Fluxo de Alocação</p>
+                    <a class="nav-item" href="index.html">
+                        <span class="nav-icon" aria-hidden="true">▦</span> Visão geral
+                    </a>
+                    <a class="nav-item" href="grade-horaria.html">
+                        <span class="nav-icon" aria-hidden="true">📅</span> Grade horária
+                    </a>
+                    <a class="nav-item" href="nova-alocacao.html">
+                        <span class="nav-icon" aria-hidden="true">⚡</span> Alocação e conflitos
+                        <span class="count" title="3 casos prioritários">3</span>
+                    </a>
+                </div>
+
+                <div class="nav-group">
+                    <p class="nav-label">Base Acadêmica e Física</p>
+                    <a class="nav-item active" href="espacos.html" aria-current="page">
+                        <span class="nav-icon" aria-hidden="true">⌂</span> Salas e laboratórios
+                        <span class="count neutral-count">6</span>
+                    </a>
+                    <a class="nav-item" href="turmas.html">
+                        <span class="nav-icon" aria-hidden="true">📚</span> Turmas ofertadas
+                        <span class="count neutral-count">18</span>
+                    </a>
+                    <a class="nav-item" href="docentes.html">
+                        <span class="nav-icon" aria-hidden="true">👨‍🏫</span> Docentes e agenda
+                        <span class="count neutral-count">14</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="avatar" aria-hidden="true">A</span>
+                <div>
+                    <strong>Ana · Cordeiro</strong>
+                    <small>Secretaria &amp; Coordenação IC</small>
+                </div>
+                <button class="icon-button" type="button" aria-label="Opções da conta">•••</button>
+            </div>
+        </aside>
+
+        <main id="conteudo" tabindex="-1">
+            <header class="topbar">
+                <div>
+                    <a class="back-link" href="index.html">← Voltar à visão geral</a>
+                    <h1>Salas, laboratórios e infraestrutura física</h1>
+                    <p class="topbar-subtitle">Configure capacidade máxima, computadores operacionais e restrições de manutenção do bloco IC.</p>
+                </div>
+                <div class="topbar-actions">
+                    <button type="button" class="button button-primary" onclick="exibirFeedback('Modo de cadastro de novo espaço físico iniciado.')">
+                        + Cadastrar novo espaço
+                    </button>
+                </div>
+            </header>
+
+            <div id="toast-feedback" class="toast-banner" role="status" aria-live="polite">
+                <span id="toast-feedback-texto"></span>
+            </div>
+
+            <!-- BARRA DE FILTROS -->
+            <section class="filter-bar" aria-label="Busca e filtro de espaços físicos">
+                <div class="filter-group">
+                    <label class="filter-field" for="busca-espacos">
+                        Buscar:
+                        <input type="search" id="busca-espacos" class="input-control input-search" placeholder="Filtrar por nome, lotação ou recurso...">
+                    </label>
+
+                    <label class="filter-field" for="filtro-categoria-espacos">
+                        Categoria:
+                        <select id="filtro-categoria-espacos" class="select-control">
+                            <option value="todos" selected>Todos os ambientes (6)</option>
+                            <option value="lab">Laboratórios de Informática (2)</option>
+                            <option value="teorica">Salas de Aula Teóricas (3)</option>
+                            <option value="auditorio">Anfiteatro / Auditório (1)</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div>
+                    <span class="status info">Capacidade total instalada: 250 lugares</span>
+                </div>
+            </section>
+
+            <!-- ESTRUTURA MESTRE-DETALHE -->
+            <div class="master-detail-grid">
+                <!-- LISTA DE ESPAÇOS -->
+                <section class="panel" aria-labelledby="inventario-heading">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 id="inventario-heading">Inventário do bloco IC</h2>
+                            <p>Selecione um ambiente para editar sua ficha técnica.</p>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <caption class="sr-only">Lista de salas e laboratórios do Instituto de Computação</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Espaço</th>
+                                    <th scope="col">Lotação</th>
+                                    <th scope="col">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="selectable-row selected" tabindex="0" data-espaco-id="Lab 02" data-espaco-cat="lab">
+                                    <td>
+                                        <strong>Lab 02 (LCC 2)</strong>
+                                        <small>Laboratório · 30 PCs · Projetor, AC</small>
+                                    </td>
+                                    <td>30 lug.</td>
+                                    <td><span class="status success">Ativo</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-espaco-id="Lab 01" data-espaco-cat="lab">
+                                    <td>
+                                        <strong>Lab 01 (LCC 1)</strong>
+                                        <small>Laboratório · 45 PCs · Projetor, AC</small>
+                                    </td>
+                                    <td>45 lug.</td>
+                                    <td><span class="status success">Ativo</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-espaco-id="Sala 101" data-espaco-cat="teorica">
+                                    <td>
+                                        <strong>Sala 101</strong>
+                                        <small>Sala Teórica · Projetor, AC, Quadro</small>
+                                    </td>
+                                    <td>45 lug.</td>
+                                    <td><span class="status success">Ativo</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-espaco-id="Sala 102" data-espaco-cat="teorica">
+                                    <td>
+                                        <strong>Sala 102</strong>
+                                        <small>Sala Teórica · Projetor, AC, Quadro</small>
+                                    </td>
+                                    <td>40 lug.</td>
+                                    <td><span class="status success">Ativo</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-espaco-id="Sala 103" data-espaco-cat="teorica">
+                                    <td>
+                                        <strong>Sala 103</strong>
+                                        <small>Sala Teórica · AC em manutenção</small>
+                                    </td>
+                                    <td>30 lug.</td>
+                                    <td><span class="status warning">Restrição</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-espaco-id="Anfiteatro IC" data-espaco-cat="auditorio">
+                                    <td>
+                                        <strong>Anfiteatro IC</strong>
+                                        <small>Auditório · Som, Projetor, Rampa PNE</small>
+                                    </td>
+                                    <td>70 lug.</td>
+                                    <td><span class="status success">Ativo</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- FICHA ESTRUTURADA DO ESPAÇO SELECIONADO -->
+                <section class="panel" aria-labelledby="espaco-ficha-titulo" aria-live="polite">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 id="espaco-ficha-titulo">Ficha de Infraestrutura: Lab 02 (LCC 2)</h2>
+                            <p>Parâmetros utilizados pelo motor SATIC para validar lotação e requisitos práticos.</p>
+                        </div>
+                        <span id="espaco-ficha-badge" class="status success">Apto para Alocação</span>
+                    </div>
+
+                    <form class="form-fields" onsubmit="event.preventDefault(); exibirFeedback('Cadastro de infraestrutura atualizado com sucesso!');">
+                        <fieldset>
+                            <legend>1. Identificação e classificação</legend>
+                            <div class="form-row-3" style="margin-top: 0.45rem;">
+                                <label class="field-label" for="espaco-codigo">
+                                    Código / Nome
+                                    <input type="text" id="espaco-codigo" class="input-control" value="Lab 02 (LCC 2)" required>
+                                </label>
+
+                                <label class="field-label" for="espaco-bloco">
+                                    Unidade / Bloco
+                                    <select id="espaco-bloco" class="select-control">
+                                        <option selected>Instituto de Computação (Bloco IC)</option>
+                                        <option>Bloco de Salas de Aula (Ciclo Básico)</option>
+                                    </select>
+                                </label>
+
+                                <label class="field-label" for="espaco-tipo">
+                                    Tipo de ambiente
+                                    <select id="espaco-tipo" class="select-control">
+                                        <option selected>Laboratório de Informática (Prático)</option>
+                                        <option>Sala de Aula Convencional (Teórica)</option>
+                                        <option>Anfiteatro / Auditório</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>2. Capacidade física e postos de trabalho</legend>
+                            <div class="form-row-3" style="margin-top: 0.45rem;">
+                                <label class="field-label" for="espaco-capacidade">
+                                    Capacidade máxima (Assentos)
+                                    <input type="number" id="espaco-capacidade" class="input-control" value="30" min="1" max="300" required>
+                                    <span class="field-hint">Limite rígido validado contra matrículas</span>
+                                </label>
+
+                                <label class="field-label" for="espaco-pcs">
+                                    Computadores funcionais
+                                    <input type="number" id="espaco-pcs" class="input-control" value="30" min="0" max="200">
+                                    <span class="field-hint">Estações ativas para aulas práticas</span>
+                                </label>
+
+                                <label class="field-label" for="espaco-pavimento">
+                                    Pavimento / Acesso
+                                    <select id="espaco-pavimento" class="select-control">
+                                        <option selected>Térreo (Acesso Direto / Sem Escadas)</option>
+                                        <option>1º Pavimento Superior</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>3. Recursos e equipamentos instalados</legend>
+                            <div class="choice-grid" style="margin-top: 0.45rem;">
+                                <label class="choice">
+                                    <input type="checkbox" id="rec-pc" checked>
+                                    <span><strong>🖥️ Computadores p/ alunos</strong><small>Bancadas individuais</small></span>
+                                </label>
+                                <label class="choice">
+                                    <input type="checkbox" id="rec-proj" checked>
+                                    <span><strong>📽️ Projetor HDMI</strong><small>Multimídia operacional</small></span>
+                                </label>
+                                <label class="choice">
+                                    <input type="checkbox" id="rec-ac" checked>
+                                    <span><strong>❄️ Ar-condicionado</strong><small>Climatização ativa</small></span>
+                                </label>
+                                <label class="choice">
+                                    <input type="checkbox" id="rec-rede" checked>
+                                    <span><strong>🌐 Rede cabeada &amp; Wi-Fi</strong><small>Acesso à internet</small></span>
+                                </label>
+                                <label class="choice">
+                                    <input type="checkbox" id="rec-pne" checked>
+                                    <span><strong>♿ Acessibilidade PNE</strong><small>Acesso para cadeirantes</small></span>
+                                </label>
+                                <label class="choice">
+                                    <input type="checkbox" id="rec-quadro" checked>
+                                    <span><strong>🖊️ Quadro branco amplo</strong><small>Panorâmico</small></span>
+                                </label>
+                                <label class="choice">
+                                    <input type="checkbox" id="rec-som">
+                                    <span><strong>🔊 Sistema de som</strong><small>Microfone e caixas</small></span>
+                                </label>
+                                <label class="choice">
+                                    <input type="checkbox" id="rec-bancada">
+                                    <span><strong>🔌 Bancada de hardware</strong><small>Eletrônica digital</small></span>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>4. Disponibilidade operacional no semestre 2026.2</legend>
+                            <div class="form-row-2" style="margin-top: 0.45rem;">
+                                <label class="field-label" for="espaco-status">
+                                    Status operacional
+                                    <select id="espaco-status" class="select-control">
+                                        <option selected>Disponível para Alocação de Graduação</option>
+                                        <option>Com Restrição Parcial (Equipamento em Manutenção)</option>
+                                        <option>Interditado Temporariamente (Reforma)</option>
+                                    </select>
+                                </label>
+
+                                <label class="field-label" for="espaco-notas">
+                                    Observações da Secretaria / Coordenação
+                                    <input type="text" id="espaco-notas" class="input-control" value="Laboratório com 30 máquinas i7. Turmas acima de 30 estudantes devem ser direcionadas ao Lab 01.">
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <div class="form-actions">
+                            <button type="button" class="button button-danger-outline" onclick="exibirFeedback('Espaço sinalizado com restrição temporária para revisão da coordenação.')">
+                                Sinalizar manutenção
+                            </button>
+                            <button type="submit" class="button button-primary">
+                                💾 Salvar ficha do espaço
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script/app.js"></script>
+</body>
+
+</html>

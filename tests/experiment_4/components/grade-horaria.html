@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Matriz semanal de alocação de horários e inspeção de restrições do SATIC.">
+    <title>SATIC | Grade horária semanal</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+
+<body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo principal</a>
+
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Navegação principal">
+            <a class="brand" href="index.html" aria-label="SATIC, página inicial">
+                <span class="brand-mark" aria-hidden="true">S</span>
+                <span>
+                    <strong>SATIC</strong>
+                    <small>Instituto de Computação · UFAL</small>
+                </span>
+            </a>
+
+            <div class="sidebar-context" aria-label="Contexto do semestre ativo">
+                <div class="sidebar-context-row">
+                    <span><span class="status-dot warning" aria-hidden="true"></span><strong>Semestre 2026.2</strong></span>
+                    <span>Em montagem</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav-wrap" aria-label="Menu do sistema">
+                <div class="nav-group">
+                    <p class="nav-label">Fluxo de Alocação</p>
+                    <a class="nav-item" href="index.html">
+                        <span class="nav-icon" aria-hidden="true">▦</span> Visão geral
+                    </a>
+                    <a class="nav-item active" href="grade-horaria.html" aria-current="page">
+                        <span class="nav-icon" aria-hidden="true">📅</span> Grade horária
+                    </a>
+                    <a class="nav-item" href="nova-alocacao.html">
+                        <span class="nav-icon" aria-hidden="true">⚡</span> Alocação e conflitos
+                        <span class="count" title="3 casos prioritários">3</span>
+                    </a>
+                </div>
+
+                <div class="nav-group">
+                    <p class="nav-label">Base Acadêmica e Física</p>
+                    <a class="nav-item" href="espacos.html">
+                        <span class="nav-icon" aria-hidden="true">⌂</span> Salas e laboratórios
+                        <span class="count neutral-count">6</span>
+                    </a>
+                    <a class="nav-item" href="turmas.html">
+                        <span class="nav-icon" aria-hidden="true">📚</span> Turmas ofertadas
+                        <span class="count neutral-count">18</span>
+                    </a>
+                    <a class="nav-item" href="docentes.html">
+                        <span class="nav-icon" aria-hidden="true">👨‍🏫</span> Docentes e agenda
+                        <span class="count neutral-count">14</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="avatar" aria-hidden="true">A</span>
+                <div>
+                    <strong>Ana · Cordeiro</strong>
+                    <small>Secretaria &amp; Coordenação IC</small>
+                </div>
+                <button class="icon-button" type="button" aria-label="Opções da conta">•••</button>
+            </div>
+        </aside>
+
+        <main id="conteudo" tabindex="-1">
+            <header class="topbar">
+                <div>
+                    <a class="back-link" href="index.html">← Voltar à visão geral</a>
+                    <h1>Matriz de alocação semanal (2026.2)</h1>
+                    <p class="topbar-subtitle">Inspecione conflitos de horário, capacidade física e encaixes livres por turno.</p>
+                </div>
+                <div class="topbar-actions">
+                    <a class="button button-secondary" href="nova-alocacao.html?modo=simulador">⚡ Simulador anti-efeito dominó (3)</a>
+                    <a class="button button-primary" href="nova-alocacao.html">+ Nova alocação</a>
+                </div>
+            </header>
+
+            <div id="toast-feedback" class="toast-banner" role="status" aria-live="polite">
+                <span id="toast-feedback-texto"></span>
+                <a class="button button-primary button-sm" href="nova-alocacao.html">Confirmar alocação →</a>
+            </div>
+
+            <!-- BARRA DE FILTROS E PERSPECTIVA DA MATRIZ -->
+            <section class="filter-bar" aria-label="Filtros da matriz de horários">
+                <div class="filter-group">
+                    <label class="filter-field" for="filtro-perspectiva-grade">
+                        Perspectiva:
+                        <select id="filtro-perspectiva-grade" class="select-control">
+                            <option value="todos" selected>Visão geral do bloco (Todas as salas)</option>
+                            <option value="lab">Apenas Laboratórios (Lab 01 e Lab 02)</option>
+                            <option value="teorica">Salas Teóricas (101, 102 e 103)</option>
+                            <option value="ranilson">Docente: Prof. Ranilson</option>
+                            <option value="conflito">Apenas células com conflito</option>
+                        </select>
+                    </label>
+
+                    <label class="filter-field" for="filtro-turno-grade">
+                        Turno:
+                        <select id="filtro-turno-grade" class="select-control">
+                            <option value="todos" selected>Manhã + Tarde</option>
+                            <option value="matutino">Apenas Matutino (M1 a M6)</option>
+                            <option value="vespertino">Apenas Vespertino (T1 a T4)</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="legend-items" aria-label="Legenda de estados de validação">
+                    <span class="status success">● Alocação regular</span>
+                    <span class="status infra">● Déficit infra / lotação</span>
+                    <span class="status danger">● Choque crítico de horário</span>
+                </div>
+            </section>
+
+            <!-- ÁREA DE TRABALHO: FILA LATERAL + MATRIZ SEMANAL -->
+            <div class="timetable-workspace">
+                <!-- COLUNA ESQUERDA: FILA DE TURMAS PENDENTES -->
+                <aside class="panel" aria-labelledby="backlog-heading">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 id="backlog-heading">Fila sem sala (3)</h2>
+                            <p>Selecione uma turma para destacar o melhor encaixe livre na grade.</p>
+                        </div>
+                    </div>
+
+                    <div class="backlog-list">
+                        <button type="button" class="backlog-card" data-backlog-turma="COMP201" data-backlog-nome="Algoritmos e ED" data-backlog-slot="Ter/Qui T1-T2 (Lab 01)">
+                            <div class="backlog-card-top">
+                                <span class="backlog-code">COMP201 · Turma A</span>
+                                <span class="status neutral">2º Per.</span>
+                            </div>
+                            <span class="backlog-title">Algoritmos e Estruturas de Dados</span>
+                            <div class="backlog-meta">
+                                <span>👤 Prof. Baldoino</span>
+                                <span>👥 45 est.</span>
+                                <span>💻 Exige Lab</span>
+                            </div>
+                        </button>
+
+                        <button type="button" class="backlog-card" data-backlog-turma="COMP304" data-backlog-nome="Redes de Computadores" data-backlog-slot="Seg/Qua T3-T4 (Lab 01)">
+                            <div class="backlog-card-top">
+                                <span class="backlog-code">COMP304 · Turma B</span>
+                                <span class="status neutral">5º Per.</span>
+                            </div>
+                            <span class="backlog-title">Redes de Computadores</span>
+                            <div class="backlog-meta">
+                                <span>👤 Prof. Willy</span>
+                                <span>👥 35 est.</span>
+                                <span>💻 Exige Lab</span>
+                            </div>
+                        </button>
+
+                        <button type="button" class="backlog-card" data-backlog-turma="COMP101" data-backlog-nome="Introdução à Computação" data-backlog-slot="Sex M1-M2 (Anfiteatro)">
+                            <div class="backlog-card-top">
+                                <span class="backlog-code">COMP101 · T. Única</span>
+                                <span class="status neutral">1º Per.</span>
+                            </div>
+                            <span class="backlog-title">Introdução à Computação</span>
+                            <div class="backlog-meta">
+                                <span>👤 Prof. Márcio</span>
+                                <span>👥 60 est.</span>
+                                <span>🏛️ Auditório</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--line);">
+                        <a class="button button-secondary button-sm" style="width: 100%;" href="nova-alocacao.html?modo=simulador&amp;conflito=conflito-3">
+                            ⚡ Encaixar as 3 turmas em lote
+                        </a>
+                    </div>
+                </aside>
+
+                <!-- COLUNA DIREITA: GRADE HORÁRIA + INSPETOR CONTEXTUAL -->
+                <div>
+                    <section class="panel timetable-panel" aria-labelledby="grade-title">
+                        <div class="timetable-legend">
+                            <div>
+                                <h2 id="grade-title">Quadro de horários do bloco IC</h2>
+                                <p style="margin: 0; font-size: 0.83rem; color: var(--muted);">Clique em qualquer turma alocada para inspecionar as regras verificadas abaixo.</p>
+                            </div>
+                        </div>
+
+                        <div class="timetable-scroll">
+                            <table class="timetable-grid">
+                                <caption class="sr-only">Matriz semanal de turmas alocadas de segunda a sexta-feira</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Slot / Horário</th>
+                                        <th scope="col">Segunda-feira</th>
+                                        <th scope="col">Terça-feira</th>
+                                        <th scope="col">Quarta-feira</th>
+                                        <th scope="col">Quinta-feira</th>
+                                        <th scope="col">Sexta-feira</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- M1 - M2 -->
+                                    <tr data-row-turno="matutino">
+                                        <td class="slot-label">
+                                            <span class="slot-code">M1 - M2</span>
+                                            <span class="slot-time">07:30 - 09:10</span>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card" data-inspect-id="valida-bd" data-card-cat="teorica">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP204 · T.A</span>
+                                                    <span class="alloc-badge ok">OK</span>
+                                                </div>
+                                                <div class="alloc-name">Banco de Dados</div>
+                                                <div class="alloc-prof">Prof. Baldoino</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Sala 101</span>
+                                                    <span>38/45 est.</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card" data-inspect-id="valida-logica" data-card-cat="teorica">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP105 · T.A</span>
+                                                    <span class="alloc-badge ok">OK</span>
+                                                </div>
+                                                <div class="alloc-name">Lógica p/ Computação</div>
+                                                <div class="alloc-prof">Prof. Willy</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Sala 102</span>
+                                                    <span>36/40 est.</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card" data-inspect-id="valida-bd" data-card-cat="teorica">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP204 · T.A</span>
+                                                    <span class="alloc-badge ok">OK</span>
+                                                </div>
+                                                <div class="alloc-name">Banco de Dados</div>
+                                                <div class="alloc-prof">Prof. Baldoino</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Sala 101</span>
+                                                    <span>38/45 est.</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card" data-inspect-id="valida-logica" data-card-cat="teorica">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP105 · T.A</span>
+                                                    <span class="alloc-badge ok">OK</span>
+                                                </div>
+                                                <div class="alloc-name">Lógica p/ Computação</div>
+                                                <div class="alloc-prof">Prof. Willy</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Sala 102</span>
+                                                    <span>36/40 est.</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="free-slot-btn" data-free-slot="Sex M1-M2 (Anfiteatro)" onclick="window.location.href='nova-alocacao.html?turma=COMP101'">
+                                                + Slot livre
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- M3 - M4 (CHOQUE CRÍTICO) -->
+                                    <tr data-row-turno="matutino">
+                                        <td class="slot-label">
+                                            <span class="slot-code">M3 - M4</span>
+                                            <span class="slot-time">09:20 - 11:00</span>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html?turma=COMP203'">
+                                                + Slot livre (Lab 01)
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card danger selected" data-inspect-id="choque-ranilson" data-card-cat="lab teorica ranilson conflito">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP203 / COMP402</span>
+                                                    <span class="alloc-badge danger">Choque</span>
+                                                </div>
+                                                <div class="alloc-name">Prog. 3 + Eng. Software</div>
+                                                <div class="alloc-prof" style="color: var(--red); font-weight: 700;">⛔ Prof. Ranilson (2 salas)</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Lab 02 &amp; S.102</span>
+                                                    <span style="color: var(--red); font-weight: 700;">42/30 est.</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html?turma=COMP203'">
+                                                + Slot livre (Lab 01)
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card danger" data-inspect-id="choque-ranilson" data-card-cat="lab teorica ranilson conflito">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP203 / COMP402</span>
+                                                    <span class="alloc-badge danger">Choque</span>
+                                                </div>
+                                                <div class="alloc-name">Prog. 3 + Eng. Software</div>
+                                                <div class="alloc-prof" style="color: var(--red); font-weight: 700;">⛔ Prof. Ranilson (2 salas)</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Lab 02 &amp; S.102</span>
+                                                    <span style="color: var(--red); font-weight: 700;">Simultâneo</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html'">
+                                                + Slot livre
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- M5 - M6 -->
+                                    <tr data-row-turno="matutino">
+                                        <td class="slot-label">
+                                            <span class="slot-code">M5 - M6</span>
+                                            <span class="slot-time">11:10 - 12:50</span>
+                                        </td>
+                                        <td><button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html'">+ Slot livre</button></td>
+                                        <td><button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html'">+ Slot livre</button></td>
+                                        <td><button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html'">+ Slot livre</button></td>
+                                        <td><button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html'">+ Slot livre</button></td>
+                                        <td><button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html'">+ Slot livre</button></td>
+                                    </tr>
+
+                                    <!-- T1 - T2 (DÉFICIT INFRA) -->
+                                    <tr data-row-turno="vespertino">
+                                        <td class="slot-label">
+                                            <span class="slot-code">T1 - T2</span>
+                                            <span class="slot-time">13:30 - 15:10</span>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card" data-inspect-id="valida-calculo" data-card-cat="teorica">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP102 · T.B</span>
+                                                    <span class="alloc-badge ok">OK</span>
+                                                </div>
+                                                <div class="alloc-name">Cálculo Diferencial I</div>
+                                                <div class="alloc-prof">Profª. Maria Helena</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Anfiteatro</span>
+                                                    <span>55/70 est.</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="free-slot-btn" data-free-slot="Ter/Qui T1-T2 (Lab 01)" onclick="window.location.href='nova-alocacao.html?turma=COMP201'">
+                                                + Slot livre
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card infra" data-inspect-id="infra-so" data-card-cat="teorica conflito">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP308 · T.A</span>
+                                                    <span class="alloc-badge infra">Déficit Infra</span>
+                                                </div>
+                                                <div class="alloc-name">Sistemas Operacionais</div>
+                                                <div class="alloc-prof">Prof. Patrick</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Sala 103 (Sem PC)</span>
+                                                    <span style="color: var(--infra); font-weight: 700;">45/30 est.!</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html?turma=COMP201'">
+                                                + Slot livre
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card infra" data-inspect-id="infra-so" data-card-cat="teorica conflito">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP308 · T.A</span>
+                                                    <span class="alloc-badge infra">Déficit Infra</span>
+                                                </div>
+                                                <div class="alloc-name">Sistemas Operacionais</div>
+                                                <div class="alloc-prof">Prof. Patrick</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Sala 103 (Sem PC)</span>
+                                                    <span style="color: var(--infra); font-weight: 700;">45/30 est.!</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- T3 - T4 -->
+                                    <tr data-row-turno="vespertino">
+                                        <td class="slot-label">
+                                            <span class="slot-code">T3 - T4</span>
+                                            <span class="slot-time">15:20 - 17:00</span>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="free-slot-btn" data-free-slot="Seg/Qua T3-T4 (Lab 01)" onclick="window.location.href='nova-alocacao.html?turma=COMP304'">
+                                                + Slot livre
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card" data-inspect-id="valida-compiladores" data-card-cat="lab">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP302 · T.A</span>
+                                                    <span class="alloc-badge ok">OK</span>
+                                                </div>
+                                                <div class="alloc-name">Compiladores</div>
+                                                <div class="alloc-prof">Prof. Márcio</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Lab 01</span>
+                                                    <span>28/45 est.</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html?turma=COMP304'">
+                                                + Slot livre
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="alloc-card" data-inspect-id="valida-compiladores" data-card-cat="lab">
+                                                <div class="alloc-card-top">
+                                                    <span class="alloc-code">COMP302 · T.A</span>
+                                                    <span class="alloc-badge ok">OK</span>
+                                                </div>
+                                                <div class="alloc-name">Compiladores</div>
+                                                <div class="alloc-prof">Prof. Márcio</div>
+                                                <div class="alloc-footer">
+                                                    <span class="alloc-room">Lab 01</span>
+                                                    <span>28/45 est.</span>
+                                                </div>
+                                            </button>
+                                        </td>
+                                        <td><button type="button" class="free-slot-btn" onclick="window.location.href='nova-alocacao.html'">+ Slot livre</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- INSPETOR CONTEXTUAL DE RESTRIÇÕES DA CÉLULA SELECIONADA -->
+                    <section class="inspector-drawer" aria-labelledby="inspetor-heading" aria-live="polite">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                                <h2 id="inspetor-heading" style="margin: 0;">🔍 Inspetor de restrições da célula selecionada</h2>
+                                <span id="inspetor-status" class="status danger">Choque Crítico Detectado</span>
+                            </div>
+                            <a id="inspetor-acao" class="button button-primary button-sm" href="nova-alocacao.html?modo=simulador&amp;conflito=conflito-1">
+                                Abrir Simulador Anti-Efeito Dominó
+                            </a>
+                        </div>
+
+                        <div class="inspector-grid">
+                            <div style="padding: 0.9rem 1rem; border-radius: var(--radius-xs); background: var(--surface-subtle); border: 1px solid var(--line);">
+                                <h3 id="inspetor-titulo" style="margin-bottom: 0.45rem;">COMP203 · Programação 3 (Turma A) vs COMP402 · Eng. de Software</h3>
+                                <ul style="margin: 0; padding-left: 1.15rem; font-size: 0.84rem; color: var(--ink-soft);">
+                                    <li><strong>Docente:</strong> <span id="inspetor-docente">Prof. Ranilson (SIAPE: 2024389)</span></li>
+                                    <li><strong>Horário:</strong> <span id="inspetor-horario">Terça e Quinta · M3-M4 (09:20 às 11:00)</span></li>
+                                    <li><strong>Espaço atual:</strong> <span id="inspetor-ambiente">Lab 02 (30 lugares) e Sala 102 (40 lugares) — Simultâneo</span></li>
+                                    <li><strong>Demanda:</strong> <span id="inspetor-matriculados">42 estudantes matriculados em COMP203 (Déficit de 12 computadores)</span></li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 style="font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.5rem;">
+                                    Diagnóstico de regras do motor SATIC
+                                </h3>
+                                <ul id="inspetor-regras" class="rule-check-list">
+                                    <li class="rule-check-item danger">
+                                        <span aria-hidden="true">⛔</span>
+                                        <div>
+                                            <strong>Regra Hard R1 — Choque Simultâneo de Docente:</strong> O Prof. Ranilson está alocado simultaneamente em COMP203 (Lab 02) e COMP402 (Sala 102) no slot Ter/Qui M3-M4.
+                                        </div>
+                                    </li>
+                                    <li class="rule-check-item infra">
+                                        <span aria-hidden="true">⚠️</span>
+                                        <div>
+                                            <strong>Regra Hard R2 — Superlotação de Laboratório:</strong> COMP203 possui 42 estudantes matriculados, mas o Lab 02 dispõe de apenas 30 computadores.
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script/app.js"></script>
+</body>
+
+</html>

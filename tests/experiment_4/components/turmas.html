@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gestão da oferta semestral de turmas, matrículas e requisitos de espaço do SATIC.">
+    <title>SATIC | Turmas ofertadas</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+
+<body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo principal</a>
+
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Navegação principal">
+            <a class="brand" href="index.html" aria-label="SATIC, página inicial">
+                <span class="brand-mark" aria-hidden="true">S</span>
+                <span>
+                    <strong>SATIC</strong>
+                    <small>Instituto de Computação · UFAL</small>
+                </span>
+            </a>
+
+            <div class="sidebar-context" aria-label="Contexto do semestre ativo">
+                <div class="sidebar-context-row">
+                    <span><span class="status-dot warning" aria-hidden="true"></span><strong>Semestre 2026.2</strong></span>
+                    <span>Em montagem</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav-wrap" aria-label="Menu do sistema">
+                <div class="nav-group">
+                    <p class="nav-label">Fluxo de Alocação</p>
+                    <a class="nav-item" href="index.html">
+                        <span class="nav-icon" aria-hidden="true">▦</span> Visão geral
+                    </a>
+                    <a class="nav-item" href="grade-horaria.html">
+                        <span class="nav-icon" aria-hidden="true">📅</span> Grade horária
+                    </a>
+                    <a class="nav-item" href="nova-alocacao.html">
+                        <span class="nav-icon" aria-hidden="true">⚡</span> Alocação e conflitos
+                        <span class="count" title="3 casos prioritários">3</span>
+                    </a>
+                </div>
+
+                <div class="nav-group">
+                    <p class="nav-label">Base Acadêmica e Física</p>
+                    <a class="nav-item" href="espacos.html">
+                        <span class="nav-icon" aria-hidden="true">⌂</span> Salas e laboratórios
+                        <span class="count neutral-count">6</span>
+                    </a>
+                    <a class="nav-item active" href="turmas.html" aria-current="page">
+                        <span class="nav-icon" aria-hidden="true">📚</span> Turmas ofertadas
+                        <span class="count neutral-count">18</span>
+                    </a>
+                    <a class="nav-item" href="docentes.html">
+                        <span class="nav-icon" aria-hidden="true">👨‍🏫</span> Docentes e agenda
+                        <span class="count neutral-count">14</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="avatar" aria-hidden="true">A</span>
+                <div>
+                    <strong>Ana · Cordeiro</strong>
+                    <small>Secretaria &amp; Coordenação IC</small>
+                </div>
+                <button class="icon-button" type="button" aria-label="Opções da conta">•••</button>
+            </div>
+        </aside>
+
+        <main id="conteudo" tabindex="-1">
+            <header class="topbar">
+                <div>
+                    <a class="back-link" href="index.html">← Voltar à visão geral</a>
+                    <h1>Oferta de turmas e requisitos de ambiente (2026.2)</h1>
+                    <p class="topbar-subtitle">Dimensione vagas, matrículas consolidadas e exigências de laboratório por disciplina.</p>
+                </div>
+                <div class="topbar-actions">
+                    <button type="button" class="button button-primary" onclick="exibirFeedback('Formulário preparado para inclusão de nova turma em 2026.2.')">
+                        + Nova turma para 2026.2
+                    </button>
+                </div>
+            </header>
+
+            <div id="toast-feedback" class="toast-banner" role="status" aria-live="polite">
+                <span id="toast-feedback-texto"></span>
+            </div>
+
+            <!-- ESTRUTURA MESTRE-DETALHE DE TURMAS -->
+            <div class="master-detail-grid">
+                <!-- LISTA DE TURMAS OFERTADAS -->
+                <section class="panel" aria-labelledby="lista-turmas-title">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 id="lista-turmas-title">Turmas do semestre (18)</h2>
+                            <p>Selecione uma turma para revisar sua alocação e demanda.</p>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <caption class="sr-only">Lista de turmas ofertadas em 2026.2</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Turma / Disciplina</th>
+                                    <th scope="col">Matr.</th>
+                                    <th scope="col">Situação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="selectable-row selected" tabindex="0" data-turma-id="COMP203-A">
+                                    <td>
+                                        <strong>COMP203 · Turma A</strong>
+                                        <small>Programação 3 · 3º Per. CC</small>
+                                    </td>
+                                    <td>42 est.</td>
+                                    <td><span class="status danger">Choque</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-turma-id="COMP308-A">
+                                    <td>
+                                        <strong>COMP308 · Turma A</strong>
+                                        <small>Sistemas Operacionais · 5º Per.</small>
+                                    </td>
+                                    <td>45 est.</td>
+                                    <td><span class="status infra">Déficit Infra</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-turma-id="COMP204-A">
+                                    <td>
+                                        <strong>COMP204 · Turma A</strong>
+                                        <small>Banco de Dados · 4º Per. CC</small>
+                                    </td>
+                                    <td>38 est.</td>
+                                    <td><span class="status success">Alocada</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-turma-id="COMP201-A">
+                                    <td>
+                                        <strong>COMP201 · Turma A</strong>
+                                        <small>Algoritmos e ED · 2º Per.</small>
+                                    </td>
+                                    <td>45 est.</td>
+                                    <td><span class="status warning">Na fila</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- FICHA DA TURMA + RECOMENDAÇÃO INTELIGENTE DO SATIC -->
+                <section class="panel" aria-labelledby="turma-ficha-titulo" aria-live="polite">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 id="turma-ficha-titulo">Turma: COMP203 · Programação 3 (Turma A)</h2>
+                            <p>Dados curriculares, demanda discente e recomendação de espaço físico.</p>
+                        </div>
+                        <span id="turma-ficha-badge" class="status danger">2 Violações Ativas</span>
+                    </div>
+
+                    <form class="form-fields" onsubmit="event.preventDefault(); exibirFeedback('Dados da turma atualizados e revalidados pelo motor SATIC!');">
+                        <fieldset>
+                            <legend>1. Dados acadêmicos e curriculares</legend>
+                            <div class="form-row-3" style="margin-top: 0.45rem;">
+                                <label class="field-label" for="campo-turma-codigo">
+                                    Código curricular
+                                    <input type="text" id="campo-turma-codigo" class="input-control" value="COMP203" required>
+                                </label>
+
+                                <label class="field-label" for="campo-turma-nome">
+                                    Disciplina
+                                    <input type="text" id="campo-turma-nome" class="input-control" value="Programação 3" required>
+                                </label>
+
+                                <label class="field-label" for="campo-turma-id">
+                                    Turma
+                                    <input type="text" id="campo-turma-id" class="input-control" value="Turma A" required>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>2. Demanda discente e requisitos de ambiente</legend>
+                            <div class="form-row-3" style="margin-top: 0.45rem;">
+                                <label class="field-label" for="campo-turma-vagas">
+                                    Vagas ofertadas
+                                    <input type="number" id="campo-turma-vagas" class="input-control" value="45" required>
+                                </label>
+
+                                <label class="field-label" for="campo-turma-matriculados">
+                                    Estudantes matriculados
+                                    <input type="number" id="campo-turma-matriculados" class="input-control" value="42" required>
+                                    <span class="field-hint">Parâmetro de corte para lotação</span>
+                                </label>
+
+                                <label class="field-label" for="campo-turma-natureza">
+                                    Natureza do espaço exigido
+                                    <select id="campo-turma-natureza" class="select-control">
+                                        <option selected>Laboratório de Informática (PCs)</option>
+                                        <option>Sala de Aula Teórica Convencional</option>
+                                        <option>Auditório / Anfiteatro</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>3. Docente titular e alocação atual</legend>
+                            <div class="form-row-2" style="margin-top: 0.45rem;">
+                                <label class="field-label" for="campo-turma-docente">
+                                    Professor responsável
+                                    <select id="campo-turma-docente" class="select-control">
+                                        <option selected>Prof. Ranilson (SIAPE: 2024389)</option>
+                                        <option>Prof. Baldoino (SIAPE: 1849201)</option>
+                                        <option>Prof. Willy (SIAPE: 1930412)</option>
+                                        <option>Prof. Patrick (SIAPE: 2104938)</option>
+                                    </select>
+                                </label>
+
+                                <label class="field-label" for="campo-turma-sala">
+                                    Sala e horário atualmente atribuídos
+                                    <select id="campo-turma-sala" class="select-control">
+                                        <option selected>Lab 02 · Ter/Qui M3-M4 (⚠️ Em choque e superlotado)</option>
+                                        <option>Lab 01 · Seg/Qua M3-M4 (✅ Compatível · 45 PCs)</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <!-- RECOMENDAÇÃO AUTOMÁTICA DO MOTOR SATIC -->
+                        <div style="padding: 1rem 1.15rem; border-radius: var(--radius-sm); background: #f0fdf4; border: 1px solid #86efac;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <div>
+                                    <strong style="color: var(--green); font-size: 0.9rem;">💡 Recomendação automática do SATIC</strong>
+                                    <p id="turma-recomendacao-texto" style="margin: 0.25rem 0 0; font-size: 0.83rem; color: #14532d;">
+                                        Transferir para o Lab 01 (45 lugares) nos horários Segunda e Quarta (M3-M4). Atende aos 42 estudantes com PCs e elimina o choque do docente.
+                                    </p>
+                                </div>
+                                <a class="button button-success button-sm" href="nova-alocacao.html?modo=simulador&amp;conflito=conflito-1">
+                                    Simular e aplicar ajuste →
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <a class="button button-secondary" href="grade-horaria.html">Ver na grade semanal</a>
+                            <button type="submit" class="button button-primary">💾 Salvar dados da turma</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Painel operacional e diagnóstico do semestre letivo do SATIC - Instituto de Computação UFAL.">
+    <title>SATIC | Visão geral do semestre</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+
+<body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo principal</a>
+
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Navegação principal">
+            <a class="brand" href="index.html" aria-label="SATIC, página inicial">
+                <span class="brand-mark" aria-hidden="true">S</span>
+                <span>
+                    <strong>SATIC</strong>
+                    <small>Instituto de Computação · UFAL</small>
+                </span>
+            </a>
+
+            <div class="sidebar-context" aria-label="Contexto do semestre ativo">
+                <div class="sidebar-context-row">
+                    <span><span class="status-dot warning" aria-hidden="true"></span><strong>Semestre 2026.2</strong></span>
+                    <span>Em montagem</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav-wrap" aria-label="Menu do sistema">
+                <div class="nav-group">
+                    <p class="nav-label">Fluxo de Alocação</p>
+                    <a class="nav-item active" href="index.html" aria-current="page">
+                        <span class="nav-icon" aria-hidden="true">▦</span> Visão geral
+                    </a>
+                    <a class="nav-item" href="grade-horaria.html">
+                        <span class="nav-icon" aria-hidden="true">📅</span> Grade horária
+                    </a>
+                    <a class="nav-item" href="nova-alocacao.html">
+                        <span class="nav-icon" aria-hidden="true">⚡</span> Alocação e conflitos
+                        <span class="count" title="3 casos prioritários">3</span>
+                    </a>
+                </div>
+
+                <div class="nav-group">
+                    <p class="nav-label">Base Acadêmica e Física</p>
+                    <a class="nav-item" href="espacos.html">
+                        <span class="nav-icon" aria-hidden="true">⌂</span> Salas e laboratórios
+                        <span class="count neutral-count">6</span>
+                    </a>
+                    <a class="nav-item" href="turmas.html">
+                        <span class="nav-icon" aria-hidden="true">📚</span> Turmas ofertadas
+                        <span class="count neutral-count">18</span>
+                    </a>
+                    <a class="nav-item" href="docentes.html">
+                        <span class="nav-icon" aria-hidden="true">👨‍🏫</span> Docentes e agenda
+                        <span class="count neutral-count">14</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="avatar" aria-hidden="true">A</span>
+                <div>
+                    <strong>Ana · Cordeiro</strong>
+                    <small>Secretaria &amp; Coordenação IC</small>
+                </div>
+                <button class="icon-button" type="button" aria-label="Opções da conta">•••</button>
+            </div>
+        </aside>
+
+        <main id="conteudo" tabindex="-1">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Semestre Letivo 2026.2 · CC &amp; EC</p>
+                    <h1>Planejamento e validação de alocações</h1>
+                    <p class="topbar-subtitle">Acompanhe as pendências da oferta acadêmica e valide restrições antes de publicar no SIGAA.</p>
+                </div>
+                <div class="topbar-actions">
+                    <a class="button button-secondary" href="grade-horaria.html">📅 Abrir grade semanal</a>
+                    <a class="button button-primary" href="nova-alocacao.html">+ Criar ou ajustar alocação</a>
+                </div>
+            </header>
+
+            <section class="intro" aria-labelledby="intro-title">
+                <div>
+                    <p class="eyebrow">Diagnóstico operacional</p>
+                    <h2 id="intro-title">Sua grade está quase pronta para publicação.</h2>
+                    <p>Restam <strong>2 conflitos críticos</strong> de horário/infraestrutura e <strong>3 turmas na fila</strong> aguardando definição de sala.</p>
+                    <div class="intro-tags">
+                        <span class="status danger">⛔ 1 Choque simultâneo de docente</span>
+                        <span class="status infra">⚠️ 1 Déficit de laboratório/capacidade</span>
+                        <span class="status warning">📥 3 Turmas pendentes na fila</span>
+                    </div>
+                </div>
+                <div class="progress-card" aria-label="Progresso da alocação: 83 por cento concluído">
+                    <strong>83%</strong>
+                    <span>das turmas alocadas</span>
+                    <div class="progress-track" aria-hidden="true"><span></span></div>
+                    <small>15 de 18 turmas do bloco IC posicionadas</small>
+                </div>
+            </section>
+
+            <section class="metrics" aria-label="Indicadores principais do semestre">
+                <a class="metric-card" href="turmas.html">
+                    <span class="metric-icon blue" aria-hidden="true">✓</span>
+                    <div>
+                        <strong>15 / 18</strong>
+                        <span>Turmas ofertadas alocadas</span>
+                        <small>Ciência e Eng. da Computação</small>
+                    </div>
+                </a>
+                <a class="metric-card" href="nova-alocacao.html?modo=simulador">
+                    <span class="metric-icon red" aria-hidden="true">!</span>
+                    <div>
+                        <strong>3 casos</strong>
+                        <span>Exigem resolução imediata</span>
+                        <small>2 conflitos hard · 1 fila em lote</small>
+                    </div>
+                </a>
+                <a class="metric-card" href="espacos.html">
+                    <span class="metric-icon green" aria-hidden="true">⌂</span>
+                    <div>
+                        <strong>78%</strong>
+                        <span>Ocupação física (6 espaços)</span>
+                        <small>2 Labs · 3 Salas · 1 Auditório (250 lug.)</small>
+                    </div>
+                </a>
+                <a class="metric-card" href="docentes.html">
+                    <span class="metric-icon purple" aria-hidden="true">↗</span>
+                    <div>
+                        <strong>14</strong>
+                        <span>Docentes ativos no semestre</span>
+                        <small>13 validados · 1 requer ajuste</small>
+                    </div>
+                </a>
+            </section>
+
+            <div class="content-grid">
+                <div class="stack-col">
+                    <!-- BLOCO 1: PENDÊNCIAS E CONFLITOS PRIORITÁRIOS -->
+                    <section class="panel" id="pendencias" aria-labelledby="pendencias-title">
+                        <div class="panel-heading">
+                            <div>
+                                <h2 id="pendencias-title">Pendências e conflitos prioritários</h2>
+                                <p>Trate um caso por vez com validação contra efeito dominó.</p>
+                            </div>
+                            <div class="segmented-tabs" role="group" aria-label="Filtrar pendências por categoria">
+                                <button type="button" class="tab-pill active" data-filter-pendencias="todos" aria-pressed="true">Todos (5)</button>
+                                <button type="button" class="tab-pill" data-filter-pendencias="conflito" aria-pressed="false">Conflitos Críticos (2)</button>
+                                <button type="button" class="tab-pill" data-filter-pendencias="fila" aria-pressed="false">Fila sem Sala (3)</button>
+                            </div>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table>
+                                <caption class="sr-only">Lista de turmas com conflitos ou aguardando alocação</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Turma e Docente</th>
+                                        <th scope="col">Ambiente / Exigência</th>
+                                        <th scope="col">Diagnóstico SATIC</th>
+                                        <th scope="col"><span class="sr-only">Ação recomendada</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr data-pendencia-tipo="conflito">
+                                        <td>
+                                            <strong>COMP203 · Programação 3 (T. A)</strong>
+                                            <small>Prof. Ranilson · 42 estudantes · Ter/Qui M3-M4</small>
+                                        </td>
+                                        <td>
+                                            <strong>Lab 02 (30 lugares)</strong>
+                                            <small>Exige laboratório de informática</small>
+                                        </td>
+                                        <td><span class="status danger">Choque docente + Superlotação</span></td>
+                                        <td>
+                                            <a class="text-action" href="nova-alocacao.html?modo=simulador&amp;conflito=conflito-1">
+                                                Simular solução <span aria-hidden="true">→</span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr data-pendencia-tipo="conflito">
+                                        <td>
+                                            <strong>COMP308 · Sistemas Operacionais (T. A)</strong>
+                                            <small>Prof. Patrick · 45 estudantes · Qua/Sex T1-T2</small>
+                                        </td>
+                                        <td>
+                                            <strong>Sala 103 (30 lug. · Sem PCs)</strong>
+                                            <small>Exige computadores para prática</small>
+                                        </td>
+                                        <td><span class="status infra">Déficit de infra e capacidade</span></td>
+                                        <td>
+                                            <a class="text-action" href="nova-alocacao.html?modo=simulador&amp;conflito=conflito-2">
+                                                Migrar para Lab 01 <span aria-hidden="true">→</span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr data-pendencia-tipo="fila">
+                                        <td>
+                                            <strong>COMP201 · Algoritmos e Est. de Dados (T. A)</strong>
+                                            <small>Prof. Baldoino · 45 estudantes · 2º Período</small>
+                                        </td>
+                                        <td>
+                                            <strong>Sem sala atribuída</strong>
+                                            <small>Exige laboratório (45 lugares)</small>
+                                        </td>
+                                        <td><span class="status warning">Aguardando na fila</span></td>
+                                        <td>
+                                            <a class="text-action" href="nova-alocacao.html?turma=COMP201">
+                                                Alocar sala <span aria-hidden="true">→</span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr data-pendencia-tipo="fila">
+                                        <td>
+                                            <strong>COMP304 · Redes de Computadores (T. B)</strong>
+                                            <small>Prof. Willy · 35 estudantes · 5º Período</small>
+                                        </td>
+                                        <td>
+                                            <strong>Sem sala atribuída</strong>
+                                            <small>Exige laboratório de informática</small>
+                                        </td>
+                                        <td><span class="status warning">Aguardando na fila</span></td>
+                                        <td>
+                                            <a class="text-action" href="nova-alocacao.html?turma=COMP304">
+                                                Alocar sala <span aria-hidden="true">→</span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr data-pendencia-tipo="fila">
+                                        <td>
+                                            <strong>COMP101 · Introdução à Computação (Única)</strong>
+                                            <small>Prof. Márcio · 60 estudantes · 1º Período</small>
+                                        </td>
+                                        <td>
+                                            <strong>Sem sala atribuída</strong>
+                                            <small>Exige auditório ou sala ampla</small>
+                                        </td>
+                                        <td><span class="status warning">Aguardando na fila</span></td>
+                                        <td>
+                                            <a class="text-action" href="nova-alocacao.html?turma=COMP101">
+                                                Alocar sala <span aria-hidden="true">→</span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- BLOCO 2: OCUPAÇÃO FÍSICA E PROGRESSO POR PERÍODO -->
+                    <section class="panel" aria-labelledby="ocupacao-title">
+                        <div class="panel-heading">
+                            <div>
+                                <h2 id="ocupacao-title">Taxa de ocupação física do bloco IC por turno</h2>
+                                <p>Equilíbrio entre laboratórios práticos, salas teóricas e auditório.</p>
+                            </div>
+                            <a href="espacos.html">Gerenciar espaços <span aria-hidden="true">→</span></a>
+                        </div>
+
+                        <div class="occupancy-list">
+                            <div class="occupancy-item">
+                                <div class="occupancy-header">
+                                    <strong>Laboratórios de Informática (Lab 01 e Lab 02) — Matutino</strong>
+                                    <span class="status danger">95% · Saturado</span>
+                                </div>
+                                <div class="occupancy-bar" aria-hidden="true">
+                                    <div class="occupancy-fill danger" style="width: 95%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="occupancy-item">
+                                <div class="occupancy-header">
+                                    <strong>Laboratórios de Informática (Lab 01 e Lab 02) — Vespertino</strong>
+                                    <span class="status infra">80% · Alta demanda</span>
+                                </div>
+                                <div class="occupancy-bar" aria-hidden="true">
+                                    <div class="occupancy-fill warning" style="width: 80%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="occupancy-item">
+                                <div class="occupancy-header">
+                                    <strong>Salas de Aula Teóricas (Salas 101, 102 e 103) — Geral</strong>
+                                    <span class="status info">72% · Equilibrado</span>
+                                </div>
+                                <div class="occupancy-bar" aria-hidden="true">
+                                    <div class="occupancy-fill" style="width: 72%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="occupancy-item">
+                                <div class="occupancy-header">
+                                    <strong>Anfiteatro / Auditório IC (70 lugares) — 1º Período</strong>
+                                    <span class="status success">55% · Folga disponível</span>
+                                </div>
+                                <div class="occupancy-bar" aria-hidden="true">
+                                    <div class="occupancy-fill success" style="width: 55%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- COLUNA DIREITA: PRONTIDÃO POR PERÍODO + ATIVIDADE RECENTE -->
+                <div class="stack-col">
+                    <section class="panel" aria-labelledby="periodos-title">
+                        <div class="panel-heading">
+                            <div>
+                                <h2 id="periodos-title">Situação por período curricular</h2>
+                                <p>Fechamento das grades de CC e EC.</p>
+                            </div>
+                            <a href="grade-horaria.html">Ver grade <span aria-hidden="true">→</span></a>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table>
+                                <caption class="sr-only">Progresso de alocação por período curricular</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Período</th>
+                                        <th scope="col">Alocadas</th>
+                                        <th scope="col">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>1º Período</strong><small>CC &amp; EC</small></td>
+                                        <td>3 / 4</td>
+                                        <td><span class="status warning">1 na fila</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>2º Período</strong><small>CC &amp; EC</small></td>
+                                        <td>3 / 4</td>
+                                        <td><span class="status warning">1 na fila</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>3º Período</strong><small>CC &amp; EC</small></td>
+                                        <td>4 / 4</td>
+                                        <td><span class="status danger">Choque M3-M4</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>4º Período</strong><small>CC &amp; EC</small></td>
+                                        <td>3 / 3</td>
+                                        <td><span class="status success">Concluído</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>5º Período</strong><small>CC &amp; EC</small></td>
+                                        <td>2 / 3</td>
+                                        <td><span class="status infra">Déficit sala</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <aside class="panel activity" aria-labelledby="activity-title">
+                        <div class="panel-heading">
+                            <div>
+                                <h2 id="activity-title">Atividade recente na proposta</h2>
+                                <p>Histórico operacional da Secretaria e Coordenação.</p>
+                            </div>
+                        </div>
+                        <ol class="activity-list">
+                            <li>
+                                <span class="timeline-dot alert" aria-hidden="true"></span>
+                                <div>
+                                    <strong>Demanda de COMP203 atualizada (Ana)</strong>
+                                    <p>42 estudantes matriculados geraram alerta de lotação no Lab 02 (30 lugares).</p>
+                                    <time datetime="2026-09-30T14:20">Há 15 minutos · Secretaria Acadêmica</time>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="timeline-dot warn" aria-hidden="true"></span>
+                                <div>
+                                    <strong>Restrição registrada na Sala 103 (Cordeiro)</strong>
+                                    <p>Ar-condicionado sinalizado em manutenção no cadastro de espaços físicos.</p>
+                                    <time datetime="2026-09-30T13:10">Hoje, 13:10 · Coordenação do IC</time>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="timeline-dot complete" aria-hidden="true"></span>
+                                <div>
+                                    <strong>COMP204 · Banco de Dados validada</strong>
+                                    <p>Alocada na Sala 101 (Seg/Qua M1-M2) sem conflitos de período.</p>
+                                    <time datetime="2026-09-30T10:30">Hoje, 10:30 · Motor SATIC</time>
+                                </div>
+                            </li>
+                        </ol>
+                    </aside>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Fluxo de alocação assistida, simulador anti-efeito dominó e exportação oficial do SATIC.">
+    <title>SATIC | Alocação e resolução de conflitos</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+
+<body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo principal</a>
+
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Navegação principal">
+            <a class="brand" href="index.html" aria-label="SATIC, página inicial">
+                <span class="brand-mark" aria-hidden="true">S</span>
+                <span>
+                    <strong>SATIC</strong>
+                    <small>Instituto de Computação · UFAL</small>
+                </span>
+            </a>
+
+            <div class="sidebar-context" aria-label="Contexto do semestre ativo">
+                <div class="sidebar-context-row">
+                    <span><span class="status-dot warning" aria-hidden="true"></span><strong>Semestre 2026.2</strong></span>
+                    <span>Em montagem</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav-wrap" aria-label="Menu do sistema">
+                <div class="nav-group">
+                    <p class="nav-label">Fluxo de Alocação</p>
+                    <a class="nav-item" href="index.html">
+                        <span class="nav-icon" aria-hidden="true">▦</span> Visão geral
+                    </a>
+                    <a class="nav-item" href="grade-horaria.html">
+                        <span class="nav-icon" aria-hidden="true">📅</span> Grade horária
+                    </a>
+                    <a class="nav-item active" href="nova-alocacao.html" aria-current="page">
+                        <span class="nav-icon" aria-hidden="true">⚡</span> Alocação e conflitos
+                        <span class="count" title="3 casos prioritários">3</span>
+                    </a>
+                </div>
+
+                <div class="nav-group">
+                    <p class="nav-label">Base Acadêmica e Física</p>
+                    <a class="nav-item" href="espacos.html">
+                        <span class="nav-icon" aria-hidden="true">⌂</span> Salas e laboratórios
+                        <span class="count neutral-count">6</span>
+                    </a>
+                    <a class="nav-item" href="turmas.html">
+                        <span class="nav-icon" aria-hidden="true">📚</span> Turmas ofertadas
+                        <span class="count neutral-count">18</span>
+                    </a>
+                    <a class="nav-item" href="docentes.html">
+                        <span class="nav-icon" aria-hidden="true">👨‍🏫</span> Docentes e agenda
+                        <span class="count neutral-count">14</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="avatar" aria-hidden="true">A</span>
+                <div>
+                    <strong>Ana · Cordeiro</strong>
+                    <small>Secretaria &amp; Coordenação IC</small>
+                </div>
+                <button class="icon-button" type="button" aria-label="Opções da conta">•••</button>
+            </div>
+        </aside>
+
+        <main id="conteudo" tabindex="-1">
+            <header class="topbar">
+                <div>
+                    <a class="back-link" href="index.html">← Voltar à visão geral</a>
+                    <h1>Central de alocação e prevenção de efeito dominó</h1>
+                    <p class="topbar-subtitle">Aloque turmas manualmente com validação imediata ou utilize o simulador assistido para resolver conflitos.</p>
+                </div>
+                <div class="segmented-tabs" role="tablist" aria-label="Modo de operação">
+                    <button type="button" role="tab" class="tab-pill active" data-mode-tab="alocar" aria-selected="true">
+                        1. Alocação assistida
+                    </button>
+                    <button type="button" role="tab" class="tab-pill" data-mode-tab="simulador" aria-selected="false">
+                        2. Simulador anti-efeito dominó (3)
+                    </button>
+                    <button type="button" role="tab" class="tab-pill" data-mode-tab="publicacao" aria-selected="false">
+                        3. Publicação e relatórios
+                    </button>
+                </div>
+            </header>
+
+            <div id="toast-feedback" class="toast-banner" role="status" aria-live="polite">
+                <span id="toast-feedback-texto"></span>
+                <a class="button button-secondary button-sm" href="grade-horaria.html">Ver na grade semanal →</a>
+            </div>
+
+            <!-- ==============================================================
+                 MODO 1: NOVA ALOCAÇÃO ASSISTIDA (Evolução do Experimento 3)
+                 ============================================================== -->
+            <section data-mode-panel="alocar" aria-labelledby="form-title">
+                <div class="form-layout">
+                    <form class="panel allocation-form" onsubmit="event.preventDefault(); exibirFeedback('Alocação confirmada e validada com sucesso na proposta 2026.2!');">
+                        <div class="panel-heading">
+                            <div>
+                                <h2 id="form-title">Defina horário e ambiente para a turma</h2>
+                                <p>Altere as opções abaixo para verificar capacidade, computadores e disponibilidade docente em tempo real.</p>
+                            </div>
+                            <span class="status info">Validador Ativo</span>
+                        </div>
+
+                        <div class="form-fields">
+                            <label class="field-label" for="turma">
+                                1. Selecione a turma ofertada
+                                <select id="turma" name="turma" class="select-control">
+                                    <option value="COMP203" data-alunos="42" data-exige-lab="true" selected>
+                                        COMP203 · Programação 3 (Turma A) — 42 estudantes · Exige Lab (Prof. Ranilson)
+                                    </option>
+                                    <option value="COMP308" data-alunos="45" data-exige-lab="true">
+                                        COMP308 · Sistemas Operacionais (Turma A) — 45 estudantes · Exige Lab (Prof. Patrick)
+                                    </option>
+                                    <option value="COMP201" data-alunos="45" data-exige-lab="true">
+                                        COMP201 · Algoritmos e Est. de Dados (Turma A) — 45 estudantes · Exige Lab (Prof. Baldoino)
+                                    </option>
+                                    <option value="COMP304" data-alunos="35" data-exige-lab="true">
+                                        COMP304 · Redes de Computadores (Turma B) — 35 estudantes · Exige Lab (Prof. Willy)
+                                    </option>
+                                    <option value="COMP101" data-alunos="60" data-exige-lab="false">
+                                        COMP101 · Introdução à Computação (Única) — 60 estudantes · Teórica (Prof. Márcio)
+                                    </option>
+                                    <option value="COMP204" data-alunos="38" data-exige-lab="false">
+                                        COMP204 · Banco de Dados (Turma A) — 38 estudantes · Teórica (Prof. Baldoino)
+                                    </option>
+                                </select>
+                            </label>
+
+                            <label class="field-label" for="horario">
+                                2. Escolha o slot de horário semanal
+                                <select id="horario" name="horario" class="select-control">
+                                    <option value="Seg/Qua M3-M4" data-conflito-docente="false" selected>
+                                        Segunda e Quarta-feira · M3-M4 (09:20 às 11:00) — ★ Janela preferencial livre
+                                    </option>
+                                    <option value="Ter/Qui T1-T2" data-conflito-docente="false">
+                                        Terça e Quinta-feira · T1-T2 (13:30 às 15:10) — ★ Janela preferencial livre
+                                    </option>
+                                    <option value="Qua/Sex T1-T2" data-conflito-docente="false">
+                                        Quarta e Sexta-feira · T1-T2 (13:30 às 15:10) — Disponível
+                                    </option>
+                                    <option value="Ter/Qui M3-M4" data-conflito-docente="true">
+                                        Terça e Quinta-feira · M3-M4 (09:20 às 11:00) — ⛔ Em choque com COMP402
+                                    </option>
+                                </select>
+                            </label>
+
+                            <fieldset>
+                                <legend>3. Ambientes do bloco IC (Comparativo de lotação e recursos)</legend>
+                                <div class="choice-grid" style="margin-top: 0.5rem;">
+                                    <label class="choice">
+                                        <input type="radio" name="sala" value="Lab 01 (LCC 1)" data-capacidade="45" data-tem-pc="true" checked>
+                                        <span>
+                                            <strong>Lab 01 (LCC 1) · Recomendado</strong>
+                                            <small>Laboratório de informática · 45 PCs · Ar-condicionado</small>
+                                        </span>
+                                    </label>
+
+                                    <label class="choice">
+                                        <input type="radio" name="sala" value="Lab 02 (LCC 2)" data-capacidade="30" data-tem-pc="true">
+                                        <span>
+                                            <strong>Lab 02 (LCC 2)</strong>
+                                            <small>Laboratório de informática · 30 PCs · Lotação menor</small>
+                                        </span>
+                                    </label>
+
+                                    <label class="choice">
+                                        <input type="radio" name="sala" value="Sala 101" data-capacidade="45" data-tem-pc="false">
+                                        <span>
+                                            <strong>Sala 101</strong>
+                                            <small>Sala teórica convencional · 45 lugares · Sem PCs</small>
+                                        </span>
+                                    </label>
+
+                                    <label class="choice">
+                                        <input type="radio" name="sala" value="Anfiteatro IC" data-capacidade="70" data-tem-pc="false">
+                                        <span>
+                                            <strong>Anfiteatro IC</strong>
+                                            <small>Auditório amplo · 70 lugares · Som e acessibilidade</small>
+                                        </span>
+                                    </label>
+                                </div>
+                            </fieldset>
+                        </div>
+
+                        <div class="form-actions">
+                            <a class="button button-secondary" href="index.html">Cancelar</a>
+                            <button class="button button-primary" type="submit">Confirmar alocação segura</button>
+                        </div>
+                    </form>
+
+                    <aside class="guidance" aria-label="Critérios verificados em tempo real" aria-live="polite">
+                        <p class="eyebrow">Validação automática SATIC</p>
+                        <h2>Antes de confirmar</h2>
+                        <ul>
+                            <li id="check-capacidade">
+                                <span class="check-icon ok" aria-hidden="true">✓</span>
+                                <span>Capacidade validada: <strong>Lab 01 (LCC 1)</strong> comporta os 42 estudantes (45 lugares).</span>
+                            </li>
+                            <li id="check-infra">
+                                <span class="check-icon ok" aria-hidden="true">✓</span>
+                                <span>Infraestrutura compatível com a natureza prática da disciplina (possui PCs).</span>
+                            </li>
+                            <li>
+                                <span class="check-icon ok" aria-hidden="true">✓</span>
+                                <span>Não há outra turma alocada nesta sala e horário.</span>
+                            </li>
+                            <li id="check-docente">
+                                <span class="check-icon ok" aria-hidden="true">✓</span>
+                                <span>Sem choque de agenda para o docente responsável e sem efeito dominó no período.</span>
+                            </li>
+                        </ul>
+                        <p>Essas verificações impedem choques de horário e superlotação antes que a proposta seja publicada no SIGAA.</p>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- ==============================================================
+                 MODO 2: SIMULADOR ANTI-EFEITO DOMINÓ (Resolução Assistida)
+                 ============================================================== -->
+            <section data-mode-panel="simulador" style="display: none;" aria-labelledby="sim-title">
+                <div class="simulator-grid">
+                    <!-- Coluna Esquerda: Fila de Conflitos -->
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h2 id="sim-title">Fila de conflitos detectados (3)</h2>
+                                <p>Selecione um caso para simular remanejamentos sem efeito dominó.</p>
+                            </div>
+                        </div>
+
+                        <div class="conflict-selector-list">
+                            <button type="button" class="conflict-item-btn active" data-sim-conflict="conflito-1">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                    <span class="status danger">Crítico · Hard #01</span>
+                                    <small style="color: var(--muted);">Ter/Qui M3-M4</small>
+                                </div>
+                                <strong style="display: block; font-size: 0.92rem; color: var(--ink);">
+                                    Choque Docente + Superlotação (Prof. Ranilson)
+                                </strong>
+                                <small style="display: block; color: var(--muted); margin-top: 0.25rem;">
+                                    COMP203 (42 est.) e COMP402 (35 est.) no mesmo horário + Lab 02 com apenas 30 lugares.
+                                </small>
+                            </button>
+
+                            <button type="button" class="conflict-item-btn infra-item" data-sim-conflict="conflito-2">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                    <span class="status infra">Infraestrutura · Hard #02</span>
+                                    <small style="color: var(--muted);">Qua/Sex T1-T2</small>
+                                </div>
+                                <strong style="display: block; font-size: 0.92rem; color: var(--ink);">
+                                    Disciplina Prática em Sala Teórica (COMP308)
+                                </strong>
+                                <small style="display: block; color: var(--muted); margin-top: 0.25rem;">
+                                    Sistemas Operacionais (45 est.) alocada na Sala 103 (30 lugares, sem computadores).
+                                </small>
+                            </button>
+
+                            <button type="button" class="conflict-item-btn warn-item" data-sim-conflict="conflito-3">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                    <span class="status warning">Fila Pendente · #03</span>
+                                    <small style="color: var(--muted);">3 Turmas</small>
+                                </div>
+                                <strong style="display: block; font-size: 0.92rem; color: var(--ink);">
+                                    Encaixe Ótimo em Lote das Turmas sem Sala
+                                </strong>
+                                <small style="display: block; color: var(--muted); margin-top: 0.25rem;">
+                                    COMP201 (Algoritmos), COMP304 (Redes) e COMP101 (Intro. à Computação).
+                                </small>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Coluna Direita: Propostas Calculadas pelo Simulador -->
+                    <div class="panel" aria-live="polite">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>🛡️ Propostas de remanejamento seguro</h2>
+                                <p>O motor SATIC testou todas as permutações para garantir zero novos conflitos.</p>
+                            </div>
+                            <span class="status success">2 soluções seguras</span>
+                        </div>
+
+                        <div id="simulador-propostas-container">
+                            <div style="margin-bottom: 1rem; padding: 0.85rem 1rem; background: #f8fafc; border: 1px solid var(--line); border-radius: var(--radius-xs);">
+                                <span class="eyebrow">Caso em análise no motor SATIC</span>
+                                <h3 style="margin: 0.15rem 0;">Choque Simultâneo: Prof. Ranilson (COMP203 vs COMP402) + Superlotação no Lab 02</h3>
+                                <small style="color: var(--muted);">Terça e Quinta · M3-M4 (09:20 - 11:00) · Afeta 3º e 6º Períodos</small>
+                            </div>
+
+                            <article class="proposal-card recommended">
+                                <div class="proposal-header">
+                                    <strong style="color: var(--green); font-size: 0.95rem;">✅ Solução Recomendada A — Impacto Dominó: ZERO novos conflitos</strong>
+                                    <span class="status success">100% Compatível</span>
+                                </div>
+                                <ol class="proposal-steps">
+                                    <li>Mover <strong>COMP203 (Programação 3 · 42 estudantes)</strong> do <em>Lab 02 (Ter/Qui M3-M4)</em> para o <strong>Lab 01 (45 lugares) na Segunda e Quarta (M3-M4)</strong>.</li>
+                                    <li>Manter <strong>COMP402 (Eng. de Software · 35 estudantes)</strong> na <strong>Sala 102 na Terça e Quinta (M3-M4)</strong>.</li>
+                                </ol>
+                                <div class="proposal-footer">
+                                    <small style="color: var(--green); font-weight: 600;">✓ Elimina o choque do Prof. Ranilson · ✓ Atende aos 42 estudantes com PCs individuais · ✓ Zero choque no 3º Período</small>
+                                    <button type="button" class="button button-success button-sm" onclick="exibirFeedback('Solução Recomendada A aplicada com sucesso! Conflito resolvido sem gerar efeito dominó na grade.')">
+                                        Aplicar Solução A
+                                    </button>
+                                </div>
+                            </article>
+
+                            <article class="proposal-card">
+                                <div class="proposal-header">
+                                    <strong style="font-size: 0.92rem;">🔀 Solução Alternativa B — Deslocamento para Turno Vespertino</strong>
+                                    <span class="status neutral">Impacto Dominó: Zero</span>
+                                </div>
+                                <ol class="proposal-steps">
+                                    <li>Manter <strong>COMP203</strong> na Terça e Quinta (M3-M4), migrando apenas da Sala Lab 02 para o <strong>Lab 01 (45 lugares)</strong>.</li>
+                                    <li>Deslocar <strong>COMP402 (Eng. de Software)</strong> para <strong>Terça e Quinta (T1-T2: 13:30 - 15:10)</strong> na <strong>Sala 102</strong> (janela preferencial do docente livre).</li>
+                                </ol>
+                                <div style="display: flex; justify-content: flex-end;">
+                                    <button type="button" class="button button-secondary button-sm" onclick="exibirFeedback('Solução Alternativa B aplicada com sucesso na proposta 2026.2.')">
+                                        Aplicar Solução B
+                                    </button>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==============================================================
+                 MODO 3: PUBLICAÇÃO E EXPORTAÇÃO DE QUADROS OFICIAIS
+                 ============================================================== -->
+            <section data-mode-panel="publicacao" style="display: none;" aria-labelledby="pub-title">
+                <div class="panel" style="margin-bottom: 1.35rem;">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 id="pub-title">Homologação e publicação oficial da grade 2026.2</h2>
+                            <p>A publicação final libera os espelhos de sala e o pacote de consolidação para o SIGAA.</p>
+                        </div>
+                        <button type="button" class="button button-success" onclick="exibirFeedback('Proposta 2026.2 homologada e quadros oficiais gerados para publicação!')">
+                            📢 Homologar e publicar grade 2026.2
+                        </button>
+                    </div>
+
+                    <div class="export-grid">
+                        <article class="export-card">
+                            <div>
+                                <span class="status info">SIGAA &amp; Coordenação</span>
+                                <h3 style="margin-top: 0.55rem;">📋 Grade oficial por curso e período</h3>
+                                <p>Relatório consolidado para lançamento no SIGAA e divulgação aos estudantes de CC e EC.</p>
+                            </div>
+                            <button type="button" class="button button-secondary button-sm" onclick="exibirFeedback('Gerando PDF da Grade Oficial por Curso e Período (2026.2)...')">
+                                Baixar quadro por curso (PDF)
+                            </button>
+                        </article>
+
+                        <article class="export-card">
+                            <div>
+                                <span class="status success">Mural &amp; Bloco IC</span>
+                                <h3 style="margin-top: 0.55rem;">🚪 Espelho de porta de sala e lab</h3>
+                                <p>Folhas individuais de horário para fixação na porta de cada laboratório e sala do bloco IC.</p>
+                            </div>
+                            <button type="button" class="button button-secondary button-sm" onclick="exibirFeedback('Folhas de porta de sala preparadas para impressão (6 espaços).')">
+                                Imprimir espelhos de salas
+                            </button>
+                        </article>
+
+                        <article class="export-card">
+                            <div>
+                                <span class="status neutral">Corpo Docente</span>
+                                <h3 style="margin-top: 0.55rem;">👨‍🏫 Agenda individual por docente</h3>
+                                <p>Comprovante de horários e salas atribuídas para envio individual aos 14 professores.</p>
+                            </div>
+                            <button type="button" class="button button-secondary button-sm" onclick="exibirFeedback('Agendas individuais dos 14 docentes exportadas com sucesso.')">
+                                Exportar agendas docentes
+                            </button>
+                        </article>
+
+                        <article class="export-card">
+                            <div>
+                                <span class="status warning">Gestão de Infra</span>
+                                <h3 style="margin-top: 0.55rem;">📊 Uso e janelas livres de espaços</h3>
+                                <p>Mapa de taxas de ocupação e horários livres para alocação de monitorias e projetos.</p>
+                            </div>
+                            <button type="button" class="button button-secondary button-sm" onclick="exibirFeedback('Planilha CSV de ocupação de infraestrutura gerada.')">
+                                Exportar planilha (CSV)
+                            </button>
+                        </article>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../script/app.js"></script>
+</body>
+
+</html>

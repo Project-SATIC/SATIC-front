@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gestão do corpo docente e matriz semanal de disponibilidade de horários do SATIC.">
+    <title>SATIC | Docentes e disponibilidade</title>
+    <link rel="stylesheet" href="../style/style.css">
+</head>
+
+<body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo principal</a>
+
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Navegação principal">
+            <a class="brand" href="index.html" aria-label="SATIC, página inicial">
+                <span class="brand-mark" aria-hidden="true">S</span>
+                <span>
+                    <strong>SATIC</strong>
+                    <small>Instituto de Computação · UFAL</small>
+                </span>
+            </a>
+
+            <div class="sidebar-context" aria-label="Contexto do semestre ativo">
+                <div class="sidebar-context-row">
+                    <span><span class="status-dot warning" aria-hidden="true"></span><strong>Semestre 2026.2</strong></span>
+                    <span>Em montagem</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav-wrap" aria-label="Menu do sistema">
+                <div class="nav-group">
+                    <p class="nav-label">Fluxo de Alocação</p>
+                    <a class="nav-item" href="index.html">
+                        <span class="nav-icon" aria-hidden="true">▦</span> Visão geral
+                    </a>
+                    <a class="nav-item" href="grade-horaria.html">
+                        <span class="nav-icon" aria-hidden="true">📅</span> Grade horária
+                    </a>
+                    <a class="nav-item" href="nova-alocacao.html">
+                        <span class="nav-icon" aria-hidden="true">⚡</span> Alocação e conflitos
+                        <span class="count" title="3 casos prioritários">3</span>
+                    </a>
+                </div>
+
+                <div class="nav-group">
+                    <p class="nav-label">Base Acadêmica e Física</p>
+                    <a class="nav-item" href="espacos.html">
+                        <span class="nav-icon" aria-hidden="true">⌂</span> Salas e laboratórios
+                        <span class="count neutral-count">6</span>
+                    </a>
+                    <a class="nav-item" href="turmas.html">
+                        <span class="nav-icon" aria-hidden="true">📚</span> Turmas ofertadas
+                        <span class="count neutral-count">18</span>
+                    </a>
+                    <a class="nav-item active" href="docentes.html" aria-current="page">
+                        <span class="nav-icon" aria-hidden="true">👨‍🏫</span> Docentes e agenda
+                        <span class="count neutral-count">14</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="avatar" aria-hidden="true">A</span>
+                <div>
+                    <strong>Ana · Cordeiro</strong>
+                    <small>Secretaria &amp; Coordenação IC</small>
+                </div>
+                <button class="icon-button" type="button" aria-label="Opções da conta">•••</button>
+            </div>
+        </aside>
+
+        <main id="conteudo" tabindex="-1">
+            <header class="topbar">
+                <div>
+                    <a class="back-link" href="index.html">← Voltar à visão geral</a>
+                    <h1>Corpo docente e matriz de disponibilidade</h1>
+                    <p class="topbar-subtitle">Gerencie limites de carga horária, janelas preferenciais e restrições administrativas por professor.</p>
+                </div>
+                <div class="topbar-actions">
+                    <button type="button" class="button button-primary" onclick="exibirFeedback('Cadastro de novo docente habilitado.')">
+                        + Cadastrar docente
+                    </button>
+                </div>
+            </header>
+
+            <div id="toast-feedback" class="toast-banner" role="status" aria-live="polite">
+                <span id="toast-feedback-texto"></span>
+            </div>
+
+            <!-- ESTRUTURA MESTRE-DETALHE DE DOCENTES -->
+            <div class="master-detail-grid">
+                <!-- COLUNA ESQUERDA: LISTA DE DOCENTES -->
+                <section class="panel" aria-labelledby="docentes-heading">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 id="docentes-heading">Quadro docente do IC (14)</h2>
+                            <p>Selecione um professor para inspecionar sua grade individual.</p>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <caption class="sr-only">Lista de professores ativos no semestre 2026.2</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Docente / SIAPE</th>
+                                    <th scope="col">Carga</th>
+                                    <th scope="col">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="selectable-row selected" tabindex="0" data-docente-nome="Prof. Ranilson" data-docente-siape="2024389" data-docente-status="choque">
+                                    <td>
+                                        <strong>Prof. Ranilson</strong>
+                                        <small>SIAPE: 2024389 · 2 turmas</small>
+                                    </td>
+                                    <td>8h / 12h</td>
+                                    <td><span class="status danger">Choque M3-M4</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-docente-nome="Prof. Baldoino" data-docente-siape="1849201" data-docente-status="regular">
+                                    <td>
+                                        <strong>Prof. Baldoino</strong>
+                                        <small>SIAPE: 1849201 · 2 turmas</small>
+                                    </td>
+                                    <td>8h / 12h</td>
+                                    <td><span class="status success">Validado</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-docente-nome="Prof. Willy" data-docente-siape="1930412" data-docente-status="regular">
+                                    <td>
+                                        <strong>Prof. Willy</strong>
+                                        <small>SIAPE: 1930412 · 2 turmas</small>
+                                    </td>
+                                    <td>8h / 12h</td>
+                                    <td><span class="status success">Validado</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-docente-nome="Prof. Patrick" data-docente-siape="2104938" data-docente-status="regular">
+                                    <td>
+                                        <strong>Prof. Patrick</strong>
+                                        <small>SIAPE: 2104938 · 2 turmas</small>
+                                    </td>
+                                    <td>8h / 12h</td>
+                                    <td><span class="status success">Validado</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-docente-nome="Profª. Maria Helena" data-docente-siape="1748290" data-docente-status="regular">
+                                    <td>
+                                        <strong>Profª. Maria Helena</strong>
+                                        <small>SIAPE: 1748290 · 2 turmas</small>
+                                    </td>
+                                    <td>8h / 12h</td>
+                                    <td><span class="status success">Validado</span></td>
+                                </tr>
+                                <tr class="selectable-row" tabindex="0" data-docente-nome="Prof. Márcio" data-docente-siape="1659302" data-docente-status="regular">
+                                    <td>
+                                        <strong>Prof. Márcio</strong>
+                                        <small>SIAPE: 1659302 · 2 turmas</small>
+                                    </td>
+                                    <td>8h / 12h</td>
+                                    <td><span class="status success">Validado</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- COLUNA DIREITA: PERFIL E MATRIZ INTERATIVA DE DISPONIBILIDADE -->
+                <section class="panel" aria-labelledby="docente-ficha-titulo" aria-live="polite">
+                    <div class="panel-heading">
+                        <div>
+                            <h2 id="docente-ficha-titulo">Perfil e Disponibilidade: Prof. Ranilson</h2>
+                            <p>Clique em qualquer janela livre da tabela para alternar entre Preferencial, Disponível ou Indisponível.</p>
+                        </div>
+                        <span id="docente-ficha-badge" class="status danger">1 Choque de Horário (M3-M4)</span>
+                    </div>
+
+                    <form class="form-fields" onsubmit="event.preventDefault(); exibirFeedback('Disponibilidade semanal do docente salva e sincronizada com o validador!');">
+                        <fieldset>
+                            <legend>1. Dados funcionais e regime de trabalho</legend>
+                            <div class="form-row-3" style="margin-top: 0.45rem;">
+                                <label class="field-label" for="docente-input-nome">
+                                    Nome do docente
+                                    <input type="text" id="docente-input-nome" class="input-control" value="Prof. Ranilson" required>
+                                </label>
+
+                                <label class="field-label" for="docente-input-siape">
+                                    Matrícula SIAPE
+                                    <input type="text" id="docente-input-siape" class="input-control" value="2024389" required>
+                                </label>
+
+                                <label class="field-label" for="docente-input-regime">
+                                    Carga máxima em sala
+                                    <select id="docente-input-regime" class="select-control">
+                                        <option selected>Dedicação Exclusiva (Máx. 12h / 3 turmas)</option>
+                                        <option>Gestão / Coordenação (Máx. 8h / 2 turmas)</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>2. Matriz semanal de janelas de horário (Interativa)</legend>
+                            <div class="table-wrap" style="margin-top: 0.5rem;">
+                                <table class="availability-table">
+                                    <caption class="sr-only">Grade semanal de disponibilidade do professor selecionado</caption>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Slot</th>
+                                            <th scope="col">Segunda</th>
+                                            <th scope="col">Terça</th>
+                                            <th scope="col">Quarta</th>
+                                            <th scope="col">Quinta</th>
+                                            <th scope="col">Sexta</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="slot-col">M1-M2 (07:30)</td>
+                                            <td><button type="button" class="avail-btn disponivel" data-toggle-avail="true">Disponível</button></td>
+                                            <td><button type="button" class="avail-btn disponivel" data-toggle-avail="true">Disponível</button></td>
+                                            <td><button type="button" class="avail-btn disponivel" data-toggle-avail="true">Disponível</button></td>
+                                            <td><button type="button" class="avail-btn disponivel" data-toggle-avail="true">Disponível</button></td>
+                                            <td><button type="button" class="avail-btn indisponivel" data-toggle-avail="true">Colegiado</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="slot-col">M3-M4 (09:20)</td>
+                                            <td><button type="button" class="avail-btn preferencial" data-toggle-avail="true">★ Preferencial</button></td>
+                                            <td>
+                                                <a class="avail-btn choque" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none;" href="nova-alocacao.html?modo=simulador&amp;conflito=conflito-1">
+                                                    ⛔ COMP203 + COMP402
+                                                </a>
+                                            </td>
+                                            <td><button type="button" class="avail-btn preferencial" data-toggle-avail="true">★ Preferencial</button></td>
+                                            <td>
+                                                <a class="avail-btn choque" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none;" href="nova-alocacao.html?modo=simulador&amp;conflito=conflito-1">
+                                                    ⛔ COMP203 + COMP402
+                                                </a>
+                                            </td>
+                                            <td><button type="button" class="avail-btn indisponivel" data-toggle-avail="true">Colegiado</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="slot-col">T1-T2 (13:30)</td>
+                                            <td><button type="button" class="avail-btn preferencial" data-toggle-avail="true">★ Preferencial</button></td>
+                                            <td><button type="button" class="avail-btn preferencial" data-toggle-avail="true">★ Preferencial</button></td>
+                                            <td><button type="button" class="avail-btn preferencial" data-toggle-avail="true">★ Preferencial</button></td>
+                                            <td><button type="button" class="avail-btn preferencial" data-toggle-avail="true">★ Preferencial</button></td>
+                                            <td><button type="button" class="avail-btn disponivel" data-toggle-avail="true">Disponível</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="slot-col">T3-T4 (15:20)</td>
+                                            <td><button type="button" class="avail-btn disponivel" data-toggle-avail="true">Disponível</button></td>
+                                            <td><button type="button" class="avail-btn indisponivel" data-toggle-avail="true">Pós-Grad. (PPGI)</button></td>
+                                            <td><button type="button" class="avail-btn disponivel" data-toggle-avail="true">Disponível</button></td>
+                                            <td><button type="button" class="avail-btn indisponivel" data-toggle-avail="true">Pós-Grad. (PPGI)</button></td>
+                                            <td><button type="button" class="avail-btn indisponivel" data-toggle-avail="true">Indisponível</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </fieldset>
+
+                        <div class="form-actions">
+                            <a class="button button-secondary" href="nova-alocacao.html?modo=simulador&amp;conflito=conflito-1">
+                                ⚡ Resolver choque no simulador
+                            </a>
+                            <button type="submit" class="button button-primary">
+                                💾 Salvar disponibilidade
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script/app.js"></script>
+</body>
+
+</html>
