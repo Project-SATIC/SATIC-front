@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SATIC — Sistema de Alocação de Turmas · IC/UFAL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/views.css">
+</head>
+<body>
+    <div class="app-shell">
+        <!-- ================================================================
+             SIDEBAR PRINCIPAL (Inspirada em Linear)
+             ================================================================ -->
+        <aside class="sidebar" aria-label="Navegação principal">
+            <div class="sidebar-header">
+                <div class="brand-row">
+                    <span class="brand-mark" aria-hidden="true">S</span>
+                    <span class="brand-name">SATIC</span>
+                    <span class="brand-unit">IC · UFAL</span>
+                </div>
+                <button type="button" class="semester-picker" data-open-cmd="true" title="Abrir comandos do planejamento">
+                    <span>2026.2 · Planejamento</span>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-group">
+                    <div class="nav-group-label">Planejamento</div>
+                    <button type="button" class="nav-item active" data-nav-target="tela-painel">
+                        <span class="nav-item-left">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                            <span>Visão Geral</span>
+                        </span>
+                    </button>
+                    <button type="button" class="nav-item" data-nav-target="tela-matriz">
+                        <span class="nav-item-left">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+                            <span>Grade</span>
+                        </span>
+                    </button>
+                    <button type="button" class="nav-item" data-nav-target="tela-conflitos">
+                        <span class="nav-item-left">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                            <span>Conflitos</span>
+                        </span>
+                        <span id="sidebar-conflict-count" class="nav-count is-critical">2</span>
+                    </button>
+
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-label">Cadastros</div>
+                    <button type="button" class="nav-item" data-nav-target="tela-turmas">
+                        <span class="nav-item-left">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                            <span>Turmas</span>
+                        </span>
+                        <span class="nav-count">18</span>
+                    </button>
+                    <button type="button" class="nav-item" data-nav-target="tela-professores">
+                        <span class="nav-item-left">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <span>Professores</span>
+                        </span>
+                        <span class="nav-count">8</span>
+                    </button>
+                    <button type="button" class="nav-item" data-nav-target="tela-espacos">
+                        <span class="nav-item-left">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+                            <span>Espaços</span>
+                        </span>
+                        <span class="nav-count">6</span>
+                    </button>
+                </div>
+                <div class="nav-group"><div class="sidebar-divider"></div>                    <button type="button" class="nav-item" data-nav-target="tela-conflitos" data-nav-pub="true">
+                        <span class="nav-item-left">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                            <span>Publicação</span>
+                        </span>
+                    </button></div>
+                    <button type="button" class="nav-item" data-nav-target="tela-configuracoes">
+                        <span class="nav-item-left"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 21V3m8 18V3m8 18V3M1 8h6m2 8h6m2-8h6"/></svg><span>Configurações</span></span>
+                    </button>            </nav>
+
+            <div class="sidebar-footer">
+                <button type="button" class="cmd-trigger" data-open-cmd="true">
+                    <span class="cmd-trigger-left">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <span>Buscar</span>
+                    </span>
+                    <kbd class="kbd-hint">Ctrl K</kbd>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ================================================================
+             ÁREA DE TRABALHO PRINCIPAL (6 TELAS CONCEITUAIS)
+             ================================================================ -->
+        <main class="main-workspace">
+
+            <!-- ============================================================
+                 TELA 1 — VISÃO GERAL DO SEMESTRE (#tela-painel)
+                 ============================================================ -->
+            <section id="tela-painel" class="view-screen active" aria-label="Visão Geral do Semestre">
+                <header class="view-topbar">
+                    <div class="topbar-left">
+                        <h1 class="topbar-title">Visão Geral</h1>
+                        <span class="topbar-divider" aria-hidden="true"></span>
+                        <span class="topbar-subtitle">Coordenação Acadêmica · 2026.2</span>
+                    </div>
+                    <div class="topbar-actions">
+                        <button type="button" class="btn btn-ghost" data-reset-demo="true" title="Restaurar estado inicial de demonstração">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                            <span>Restaurar demo</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-nav-target="tela-matriz">
+                            <span>Abrir Matriz</span>
+                        </button>
+                        <button type="button" class="btn btn-primary" data-open-generator="true">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg>
+                            <span>Gerar grade</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="view-body">
+                    <div id="overview-content" class="overview-container">
+                        <!-- Renderizado via js/app.js -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 TELA 2 — MATRIZ DE ALOCAÇÃO (#tela-matriz)
+                 ============================================================ -->
+            <section id="tela-matriz" class="view-screen" aria-label="Matriz de Alocação">
+                <header class="view-topbar">
+                    <div class="topbar-left">
+                        <h1 class="topbar-title">Grade 2026.2</h1>
+                        <span class="topbar-divider" aria-hidden="true"></span>
+                        <select id="matrix-filter-curso" class="control-select" aria-label="Filtrar por curso">
+                            <option value="todos">Todos os cursos</option>
+                            <option value="CC">Ciência da Computação (CC)</option>
+                            <option value="EC">Engenharia de Computação (EC)</option>
+                        </select>
+                        <select id="matrix-filter-periodo" class="control-select" aria-label="Filtrar por período">
+                            <option value="todos">Todos os períodos</option>
+                            <option value="1º Período">1º Período</option>
+                            <option value="2º Período">2º Período</option>
+                            <option value="3º Período">3º Período</option>
+                            <option value="4º Período">4º Período</option>
+                            <option value="5º Período">5º Período</option>
+                            <option value="Eletiva">Eletivas</option>
+                        </select>
+                        <select id="matrix-filter-espaco" class="control-select" aria-label="Filtrar por espaço">
+                            <option value="todos">Todos os espaços</option>
+                            <option value="Lab 01">Lab 01</option>
+                            <option value="Lab 02">Lab 02</option>
+                            <option value="Lab 03">Lab 03</option>
+                            <option value="Sala 101">Sala 101</option>
+                            <option value="Sala 204">Sala 204</option>
+                            <option value="Anfiteatro IC">Anfiteatro IC</option>
+                        </select>
+                        <select id="matrix-filter-professor" class="control-select" aria-label="Filtrar por docente">
+                            <option value="todos">Todos os docentes</option>
+                            <option value="Ranilson">Ranilson</option>
+                            <option value="André">André</option>
+                            <option value="Glauber">Glauber</option>
+                            <option value="Baldoino">Baldoino</option>
+                            <option value="Rodrigo">Rodrigo</option>
+                            <option value="Evandro">Evandro</option>
+                            <option value="Leandro">Leandro</option>
+                            <option value="Bruno">Bruno</option>
+                        </select>
+                    </div>
+                    <div class="topbar-actions">
+                        <button type="button" class="btn btn-secondary" data-open-generator="true">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg>
+                            <span>Gerar grade</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="matrix-workspace">
+                    <!-- Fila lateral compacta de turmas não alocadas -->
+                    <aside class="unallocated-panel" aria-label="Turmas não alocadas">
+                        <div class="unallocated-header">
+                            <span class="unallocated-title">Não alocadas</span>
+                            <span id="matrix-unallocated-count" class="nav-count">3</span>
+                        </div>
+                        <div id="matrix-unallocated-list" class="unallocated-list">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                    </aside>
+
+                    <!-- Grade semanal principal -->
+                    <div class="schedule-stage">
+                        <div id="matrix-guide-bar" class="schedule-guide-bar">
+                            <span id="matrix-guide-text">Selecione um slot destacado em verde para alocar a turma.</span>
+                            <button type="button" class="btn btn-ghost" data-cancel-move="true">Cancelar (Esc)</button>
+                        </div>
+
+                        <div class="schedule-scroll" tabindex="0" aria-label="Rolagem da grade semanal">
+                            <table class="schedule-grid" aria-label="Grade horária semanal">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Horário</th>
+                                        <th scope="col">SEG</th>
+                                        <th scope="col">TER</th>
+                                        <th scope="col">QUA</th>
+                                        <th scope="col">QUI</th>
+                                        <th scope="col">SEX</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="matrix-schedule-tbody">
+                                    <!-- Renderizado via js/app.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Drawer contextual sob demanda da Matriz -->
+                    <aside id="drawer-matriz" class="context-drawer" aria-label="Inspeção da turma selecionada">
+                        <div class="drawer-header">
+                            <div class="drawer-title-group">
+                                <div id="drawer-matriz-title" class="drawer-title">Programação 3</div>
+                                <div id="drawer-matriz-subtitle" class="drawer-subtitle">COMP203 · Turma A</div>
+                            </div>
+                            <button type="button" class="btn btn-icon" data-matrix-drawer-action="close" aria-label="Fechar painel">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                        </div>
+                        <div id="drawer-matriz-body" class="drawer-body">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                        <div id="drawer-matriz-footer" class="drawer-footer">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 TELA 3 — CENTRAL DE CONFLITOS & PUBLICAÇÃO (#tela-conflitos)
+                 ============================================================ -->
+            <section id="tela-conflitos" class="view-screen" aria-label="Central de Conflitos e Publicação">
+                <header class="view-topbar">
+                    <div class="topbar-left">
+                        <h1 class="topbar-title">Conflitos &amp; Publicação</h1>
+                        <span class="topbar-divider" aria-hidden="true"></span>
+                        <span id="conflitos-header-count" class="topbar-subtitle">2 conflitos ativos</span>
+                    </div>
+                    <div class="topbar-actions">
+                        <div class="dropdown-wrapper">
+                            <button type="button" class="btn btn-secondary" data-dropdown-toggle="export-dropdown-menu">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                <span>Exportar</span>
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div id="export-dropdown-menu" class="dropdown-menu" role="menu">
+                                <button type="button" class="dropdown-item" data-export-type="Grade oficial (PDF)">Grade oficial (PDF)</button>
+                                <button type="button" class="dropdown-item" data-export-type="Planilha SIAP (XLSX)">Planilha SIAP (XLSX)</button>
+                                <button type="button" class="dropdown-item" data-export-type="Ocupação de salas (CSV)">Ocupação de salas (CSV)</button>
+                                <button type="button" class="dropdown-item" data-export-type="Grade por professor (PDF)">Grade por professor (PDF)</button>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-primary" data-open-generator="true">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg>
+                            <span>Resolver via motor</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="triage-split">
+                    <!-- Coluna esquerda: lista de conflitos -->
+                    <aside class="triage-list-col" aria-label="Fila de conflitos">
+                        <div class="triage-list-header">
+                            <button type="button" class="btn btn-ghost active" data-conflict-filter="todos">Todos</button>
+                            <button type="button" class="btn btn-ghost" data-conflict-filter="docente">Docente</button>
+                            <button type="button" class="btn btn-ghost" data-conflict-filter="sala">Sala</button>
+                            <button type="button" class="btn btn-ghost" data-conflict-filter="capacidade">Capacidade</button>
+                        </div>
+                        <div id="triage-list-items">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                    </aside>
+
+                    <!-- Coluna direita: inspeção do conflito selecionado, alternativas e publicação -->
+                    <div class="triage-detail-col">
+                        <div id="triage-detail-content" class="triage-detail-card">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 TELA 4 — TURMAS & DISCIPLINAS (#tela-turmas)
+                 ============================================================ -->
+            <section id="tela-turmas" class="view-screen" aria-label="Turmas e Disciplinas">
+                <header class="view-topbar">
+                    <div class="topbar-left">
+                        <h1 class="topbar-title">Turmas &amp; Disciplinas</h1>
+                        <span class="topbar-divider" aria-hidden="true"></span>
+                        <span class="topbar-subtitle"><span id="turmas-total-count">18</span> turmas ofertadas</span>
+                    </div>
+                    <div class="topbar-actions">
+                        <input type="search" id="turmas-search" class="control-input" placeholder="Filtrar código ou disciplina..." aria-label="Buscar turma">
+                        <select id="turmas-filter-curso" class="control-select" aria-label="Curso">
+                            <option value="todos">Todos os cursos</option>
+                            <option value="CC">CC</option>
+                            <option value="EC">EC</option>
+                        </select>
+                        <select id="turmas-filter-periodo" class="control-select" aria-label="Período">
+                            <option value="todos">Todos os períodos</option>
+                            <option value="1º Período">1º Período</option>
+                            <option value="2º Período">2º Período</option>
+                            <option value="3º Período">3º Período</option>
+                            <option value="4º Período">4º Período</option>
+                            <option value="5º Período">5º Período</option>
+                            <option value="Eletiva">Eletiva</option>
+                        </select>
+                        <select id="turmas-filter-ambiente" class="control-select" aria-label="Ambiente exigido">
+                            <option value="todos">Qualquer ambiente</option>
+                            <option value="Laboratório">Laboratório</option>
+                            <option value="Sala">Sala</option>
+                            <option value="Auditório">Auditório</option>
+                        </select>
+                        <select id="turmas-filter-status" class="control-select" aria-label="Status de alocação">
+                            <option value="todos">Todos os status</option>
+                            <option value="alocada">Alocadas sem conflito</option>
+                            <option value="conflito">Com conflito</option>
+                            <option value="pendente">Sem sala</option>
+                        </select>
+                    </div>
+                </header>
+
+                <div class="split-table-drawer">
+                    <div class="table-pane">
+                        <table class="data-table" aria-label="Tabela de turmas ofertadas">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Código</th>
+                                    <th scope="col">Disciplina</th>
+                                    <th scope="col">Turma</th>
+                                    <th scope="col">Curso</th>
+                                    <th scope="col">Professor</th>
+                                    <th scope="col">Alunos</th>
+                                    <th scope="col">Ambiente</th>
+                                    <th scope="col">Alocação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="turmas-tbody">
+                                <!-- Renderizado via js/app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <aside id="drawer-turmas" class="context-drawer" aria-label="Detalhes da turma">
+                        <div class="drawer-header">
+                            <div class="drawer-title-group">
+                                <div id="drawer-turmas-title" class="drawer-title">Turma</div>
+                                <div id="drawer-turmas-subtitle" class="drawer-subtitle">Código</div>
+                            </div>
+                            <button type="button" class="btn btn-icon" data-turma-drawer="close" aria-label="Fechar painel">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                        </div>
+                        <div id="drawer-turmas-body" class="drawer-body">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                        <div id="drawer-turmas-footer" class="drawer-footer">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 TELA 5 — PROFESSORES & DISPONIBILIDADE (#tela-professores)
+                 ============================================================ -->
+            <section id="tela-professores" class="view-screen" aria-label="Professores e Disponibilidade">
+                <header class="view-topbar">
+                    <div class="topbar-left">
+                        <h1 class="topbar-title">Professores &amp; Disponibilidade</h1>
+                        <span class="topbar-divider" aria-hidden="true"></span>
+                        <span class="topbar-subtitle">Corpo Docente · IC/UFAL</span>
+                    </div>
+                    <div class="topbar-actions">
+                        <input type="search" id="professores-search" class="control-input" placeholder="Buscar docente ou SIAPE..." aria-label="Buscar professor">
+                        <select id="professores-filter-status" class="control-select" aria-label="Status de restrições">
+                            <option value="todos">Todos os docentes</option>
+                            <option value="regular">Disponibilidade regular</option>
+                            <option value="conflito">Com conflito de horário</option>
+                        </select>
+                    </div>
+                </header>
+
+                <div class="split-table-drawer">
+                    <div class="table-pane">
+                        <table class="data-table" aria-label="Tabela de professores">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Professor</th>
+                                    <th scope="col">SIAPE</th>
+                                    <th scope="col">Regime</th>
+                                    <th scope="col">Carga</th>
+                                    <th scope="col">Turmas</th>
+                                    <th scope="col">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="professores-tbody">
+                                <!-- Renderizado via js/app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <aside id="drawer-professores" class="context-drawer is-open" aria-label="Disponibilidade semanal do docente">
+                        <div class="drawer-header">
+                            <div class="drawer-title-group">
+                                <div id="drawer-professores-title" class="drawer-title">Professor</div>
+                                <div id="drawer-professores-subtitle" class="drawer-subtitle">Área</div>
+                            </div>
+                            <button type="button" class="btn btn-icon" data-prof-drawer-close="true" aria-label="Fechar painel">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                        </div>
+                        <div id="drawer-professores-body" class="drawer-body">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 TELA 6 — ESPAÇOS FÍSICOS (#tela-espacos)
+                 ============================================================ -->
+            <section id="tela-espacos" class="view-screen" aria-label="Espaços Físicos">
+                <header class="view-topbar">
+                    <div class="topbar-left">
+                        <h1 class="topbar-title">Espaços Físicos</h1>
+                        <span class="topbar-divider" aria-hidden="true"></span>
+                        <span class="topbar-subtitle">Salas, Laboratórios e Auditórios</span>
+                    </div>
+                    <div class="topbar-actions">
+                        <input type="search" id="espacos-search" class="control-input" placeholder="Buscar espaço ou recurso..." aria-label="Buscar espaço">
+                        <select id="espacos-filter-tipo" class="control-select" aria-label="Filtrar por tipo">
+                            <option value="todos">Todos os tipos</option>
+                            <option value="Laboratório">Laboratório</option>
+                            <option value="Sala">Sala</option>
+                            <option value="Auditório">Auditório</option>
+                        </select>
+                        <select id="espacos-filter-status" class="control-select" aria-label="Filtrar por status">
+                            <option value="todos">Todos os status</option>
+                            <option value="Disponível">Disponível</option>
+                            <option value="Manutenção">Manutenção</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" data-espaco-drawer="new">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            <span>Novo espaço</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="split-table-drawer">
+                    <div class="table-pane">
+                        <table class="data-table" aria-label="Inventário de espaços físicos">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Espaço</th>
+                                    <th scope="col">Tipo</th>
+                                    <th scope="col">Capacidade</th>
+                                    <th scope="col">Equipamentos</th>
+                                    <th scope="col">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="espacos-tbody">
+                                <!-- Renderizado via js/app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <aside id="drawer-espacos" class="context-drawer" aria-label="Inspeção do espaço físico">
+                        <div class="drawer-header">
+                            <div class="drawer-title-group">
+                                <div id="drawer-espacos-title" class="drawer-title">Espaço</div>
+                                <div id="drawer-espacos-subtitle" class="drawer-subtitle">Tipo</div>
+                            </div>
+                            <button type="button" class="btn btn-icon" data-espaco-drawer="close" aria-label="Fechar painel">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                        </div>
+                        <div id="drawer-espacos-body" class="drawer-body">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                        <div id="drawer-espacos-footer" class="drawer-footer">
+                            <!-- Renderizado via js/app.js -->
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <section id="tela-configuracoes" class="view-screen" aria-label="Configurações">
+                <header class="view-topbar"><div class="topbar-left"><h1 class="topbar-title">Configurações</h1><span class="topbar-subtitle">IC · UFAL</span></div></header>
+                <div class="view-body">
+                    <div class="settings-content">
+                        <div class="detail-section"><h2 class="section-heading">Período letivo</h2><div class="detail-grid"><span class="detail-label">Semestre</span><span class="detail-value">2026.2</span><span class="detail-label">Etapa</span><span class="detail-value">Planejamento</span></div></div>
+                        <div class="detail-section"><h2 class="section-heading">Dados desta versão</h2><p class="cell-muted">As alterações ficam na sessão atual do navegador. Recarregar a página restaura os dados de demonstração.</p><div><button type="button" class="btn btn-secondary" data-reset-demo="true">Restaurar demonstração</button></div></div>
+                        <div class="detail-section"><h2 class="section-heading">Atalhos</h2><div class="detail-grid"><span class="detail-label">Ctrl K</span><span>Busca e comandos</span><span class="detail-label">Esc</span><span>Cancelar alocação ou fechar painel</span><span class="detail-label">Enter / Espaço</span><span>Selecionar linha ou horário</span></div></div>
+                    </div>
+                </div>
+            </section>        </main>
+    </div>
+
+    <!-- ================================================================
+         MODAL DE GERAÇÃO AUTOMÁTICA DE GRADE
+         ================================================================ -->
+    <div id="modal-gerar-grade" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-gerar-title">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <span id="modal-gerar-title" class="modal-title">Gerar grade 2026.2</span>
+                <button type="button" class="btn btn-icon" data-gen-action="close" aria-label="Fechar modal">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            <div id="modal-gerar-body" class="modal-body">
+                <!-- Renderizado via js/app.js -->
+            </div>
+            <div id="modal-gerar-footer" class="modal-footer">
+                <!-- Renderizado via js/app.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         COMMAND MENU (Ctrl K / Ctrl+K — Inspirado em Raycast / Linear)
+         ================================================================ -->
+    <div id="modal-command" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Menu de comandos rápidos">
+        <div class="modal-dialog">
+            <div class="cmd-input-row">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="cmd-search-input" class="cmd-input" placeholder="Buscar turma, professor, sala ou executar comando..." autocomplete="off">
+                <button type="button" class="btn btn-ghost" data-cmd-close="true">Esc</button>
+            </div>
+            <div id="cmd-results-list" class="cmd-list">
+                <!-- Renderizado via js/app.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         NOTIFICAÇÃO OPERACIONAL DISCRETA (TOAST)
+         ================================================================ -->
+    <div id="status-toast" class="status-toast" role="status" aria-live="polite">
+        <span class="dot dot-success"></span>
+        <span id="status-toast-text">Operação concluída.</span>
+    </div>
+
+    <script src="js/icons.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

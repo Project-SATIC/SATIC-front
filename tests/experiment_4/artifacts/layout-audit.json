@@ -1,0 +1,266 @@
+{
+  "qa1440": [
+    {
+      "columns": [],
+      "documentOverflow": false,
+      "overflows": [
+        {
+          "element": "topbar-actions",
+          "scrollWidth": 362,
+          "width": 362
+        }
+      ],
+      "screen": "tela-painel",
+      "sidebarOverflow": false,
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "columns": [],
+      "documentOverflow": false,
+      "overflows": [
+        {
+          "element": "topbar-actions",
+          "scrollWidth": 115,
+          "width": 115
+        },
+        {
+          "element": "schedule-scroll",
+          "scrollWidth": 1004,
+          "width": 1004
+        }
+      ],
+      "screen": "tela-matriz",
+      "sidebarOverflow": false,
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "columns": [
+        8,
+        8
+      ],
+      "documentOverflow": false,
+      "overflows": [
+        {
+          "element": "topbar-actions",
+          "scrollWidth": 822,
+          "width": 822
+        },
+        {
+          "element": "table-pane",
+          "scrollWidth": 1228,
+          "width": 1228
+        }
+      ],
+      "screen": "tela-turmas",
+      "sidebarOverflow": false,
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "columns": [
+        6,
+        6
+      ],
+      "documentOverflow": false,
+      "overflows": [
+        {
+          "element": "topbar-actions",
+          "scrollWidth": 374,
+          "width": 374
+        },
+        {
+          "element": "table-pane",
+          "scrollWidth": 1228,
+          "width": 1228
+        }
+      ],
+      "screen": "tela-professores",
+      "sidebarOverflow": false,
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "columns": [
+        5,
+        5
+      ],
+      "documentOverflow": false,
+      "overflows": [
+        {
+          "element": "topbar-actions",
+          "scrollWidth": 590,
+          "width": 590
+        },
+        {
+          "element": "table-pane",
+          "scrollWidth": 1228,
+          "width": 1228
+        }
+      ],
+      "screen": "tela-espacos",
+      "sidebarOverflow": false,
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "columns": [],
+      "documentOverflow": false,
+      "overflows": [
+        {
+          "element": "topbar-actions",
+          "scrollWidth": 279,
+          "width": 279
+        }
+      ],
+      "screen": "tela-conflitos",
+      "sidebarOverflow": false,
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "columns": [],
+      "documentOverflow": false,
+      "overflows": [],
+      "screen": "tela-configuracoes",
+      "sidebarOverflow": false,
+      "viewport": [
+        1440,
+        900
+      ]
+    }
+  ],
+  "qa1366": [
+    {
+      "documentOverflow": false,
+      "elementOverflow": [],
+      "eventOverflow": 0,
+      "icons": true,
+      "screen": "tela-painel",
+      "sidebarOverflow": false,
+      "viewport": [
+        1366,
+        768
+      ]
+    },
+    {
+      "documentOverflow": false,
+      "elementOverflow": [
+        {
+          "element": "schedule-scroll",
+          "scrollWidth": 915,
+          "width": 915
+        }
+      ],
+      "eventOverflow": 0,
+      "icons": true,
+      "screen": "tela-matriz",
+      "sidebarOverflow": false,
+      "viewport": [
+        1366,
+        768
+      ]
+    },
+    {
+      "documentOverflow": false,
+      "elementOverflow": [
+        {
+          "element": "table-pane",
+          "scrollWidth": 1139,
+          "width": 1139
+        }
+      ],
+      "eventOverflow": 0,
+      "icons": true,
+      "screen": "tela-turmas",
+      "sidebarOverflow": false,
+      "viewport": [
+        1366,
+        768
+      ]
+    },
+    {
+      "documentOverflow": false,
+      "elementOverflow": [
+        {
+          "element": "table-pane",
+          "scrollWidth": 742,
+          "width": 742
+        },
+        {
+          "element": "drawer-body",
+          "scrollWidth": 411,
+          "width": 411
+        },
+        {
+          "element": "availability-grid",
+          "scrollWidth": 379,
+          "width": 379
+        }
+      ],
+      "eventOverflow": 0,
+      "icons": true,
+      "screen": "tela-professores",
+      "sidebarOverflow": false,
+      "viewport": [
+        1366,
+        768
+      ]
+    },
+    {
+      "documentOverflow": false,
+      "elementOverflow": [
+        {
+          "element": "table-pane",
+          "scrollWidth": 1154,
+          "width": 1154
+        }
+      ],
+      "eventOverflow": 0,
+      "icons": true,
+      "screen": "tela-espacos",
+      "sidebarOverflow": false,
+      "viewport": [
+        1366,
+        768
+      ]
+    },
+    {
+      "documentOverflow": false,
+      "elementOverflow": [],
+      "eventOverflow": 0,
+      "icons": true,
+      "screen": "tela-conflitos",
+      "sidebarOverflow": false,
+      "viewport": [
+        1366,
+        768
+      ]
+    },
+    {
+      "documentOverflow": false,
+      "elementOverflow": [],
+      "eventOverflow": 0,
+      "icons": true,
+      "screen": "tela-configuracoes",
+      "sidebarOverflow": false,
+      "viewport": [
+        1366,
+        768
+      ]
+    }
+  ]
+}
