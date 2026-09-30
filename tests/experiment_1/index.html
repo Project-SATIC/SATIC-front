@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SATIC - Sistema de Alocação de Turmas do Instituto de Computação (UFAL)</title>
+  
+  <!-- Folhas de Estilo Estruturais Agnósticas -->
+  <link rel="stylesheet" href="css/base-agnostica.css">
+  <link rel="stylesheet" href="css/componentes-agnosticos.css">
+  <link rel="stylesheet" href="css/telas.css">
+</head>
+<body>
+
+  <!-- CONTÊINER PRINCIPAL DA APLICAÇÃO -->
+  <div class="janela-aplicacao" id="janela-satic">
+
+    <!-- 1. BARRA DE TÍTULO SUPERIOR -->
+    <header class="barra-titulo">
+      <div class="barra-titulo-esquerda">
+        <div class="icone-aplicacao">S</div>
+        <span class="titulo-sistema">SATIC</span>
+        <span class="subtitulo-sistema">Sistema de Alocação de Turmas • Instituto de Computação (UFAL)</span>
+      </div>
+      <div class="barra-titulo-direita">
+        <span class="indicador-contexto-ativo">
+          <span class="ponto-status-ativo"></span> Semestre Letivo: <strong>2026.2 (Em Planejamento)</strong>
+        </span>
+        <span class="indicador-contexto-ativo">
+          Operador: <strong>Coordenação (Cordeiro) / Secretaria (Ana)</strong>
+        </span>
+        <span style="font-size: var(--tamanho-texto-micro); opacity: 0.75;">MVP v1.0</span>
+      </div>
+    </header>
+
+    <!-- 2. BARRA DE NAVEGAÇÃO ENTRE AS 6 TELAS DO SISTEMA -->
+    <nav class="barra-menu" role="menubar">
+      <div class="item-menu" id="aba-painel" onclick="navegarParaTela('tela-painel', 'aba-painel')">
+        📊 1. Visão Geral do Semestre
+      </div>
+      <div class="item-menu ativo" id="aba-matriz" onclick="navegarParaTela('tela-matriz', 'aba-matriz')">
+        📅 2. Matriz de Alocação (Grade)
+      </div>
+      <div class="item-menu" id="aba-espacos" onclick="navegarParaTela('tela-espacos', 'aba-espacos')">
+        🏢 3. Espaços Físicos (Salas & Labs)
+      </div>
+      <div class="item-menu" id="aba-turmas" onclick="navegarParaTela('tela-turmas', 'aba-turmas')">
+        📚 4. Turmas & Disciplinas
+      </div>
+      <div class="item-menu" id="aba-professores" onclick="navegarParaTela('tela-professores', 'aba-professores')">
+        👨‍🏫 5. Professores & Disponibilidade
+      </div>
+      <div class="item-menu" id="aba-conflitos" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+        ⚡ 6. Central de Conflitos & Publicação
+        <span class="contador-menu">3</span>
+      </div>
+    </nav>
+
+
+    <!-- ====================================================================
+         TELA 1: VISÃO GERAL DO SEMESTRE & DIAGNÓSTICO OPERACIONAL
+         ==================================================================== -->
+    <section class="tela-conteudo" id="tela-painel">
+      
+      <!-- Barra de Ferramentas -->
+      <div class="barra-ferramentas">
+        <div class="grupo-ferramentas">
+          <label class="rotulo-campo">Semestre de Referência:</label>
+          <select class="seletor-opcao" style="width: 190px;">
+            <option selected>2026.2 - Em Montagem</option>
+            <option>2026.1 - Consolidado</option>
+            <option>2025.2 - Histórico</option>
+          </select>
+          <span class="emblema-status emblema-critico">Bloqueado para Publicação (3 Conflitos Hard)</span>
+        </div>
+
+        <div class="grupo-ferramentas">
+          <button class="botao-acao" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+            🔍 Abrir Central de Conflitos
+          </button>
+          <button class="botao-acao botao-primario" onclick="navegarParaTela('tela-matriz', 'aba-matriz')">
+            📅 Ir para Matriz de Alocação
+          </button>
+        </div>
+      </div>
+
+      <!-- Conteúdo em Blocos da Visão Geral -->
+      <div class="conteiner-painel-geral">
+
+        <!-- Bloco Topo: 4 Indicadores Principais (KPIs) -->
+        <div class="grade-indicadores-topo">
+          
+          <div class="cartao-indicador">
+            <div class="topo-indicador">
+              <span>TURMAS OFERTADAS (2026.2)</span>
+              <span class="emblema-status emblema-neutro">CC + EC</span>
+            </div>
+            <div class="valor-principal-indicador">18 Turmas</div>
+            <div class="barra-progresso-conteiner">
+              <div class="barra-progresso-preenchimento" style="width: 83%;"></div>
+            </div>
+            <div class="rodape-indicador">
+              <span>15 Alocadas na Grade</span>
+              <strong>3 Pendentes na Fila</strong>
+            </div>
+          </div>
+
+          <div class="cartao-indicador indicador-critico">
+            <div class="topo-indicador">
+              <span>RESTRIÇÕES CRÍTICAS (HARD)</span>
+              <span class="emblema-status emblema-critico">Ação Exigida</span>
+            </div>
+            <div class="valor-principal-indicador" style="color: var(--cor-alerta-critico-base);">3 Conflitos</div>
+            <div class="barra-progresso-conteiner">
+              <div class="barra-progresso-preenchimento critico" style="width: 100%;"></div>
+            </div>
+            <div class="rodape-indicador">
+              <span>2 Choques Docente • 1 Déficit Infra</span>
+              <a href="#" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos'); return false;" style="color: var(--cor-alerta-critico-texto); font-weight: 700;">Resolver →</a>
+            </div>
+          </div>
+
+          <div class="cartao-indicador indicador-sucesso">
+            <div class="topo-indicador">
+              <span>ESPAÇOS FÍSICOS DO BLOCO IC</span>
+              <span class="emblema-status emblema-sucesso">6 Ativos</span>
+            </div>
+            <div class="valor-principal-indicador">78% Ocupação</div>
+            <div class="barra-progresso-conteiner">
+              <div class="barra-progresso-preenchimento sucesso" style="width: 78%;"></div>
+            </div>
+            <div class="rodape-indicador">
+              <span>2 Labs • 3 Salas • 1 Auditório</span>
+              <span>250 Assentos Totais</span>
+            </div>
+          </div>
+
+          <div class="cartao-indicador indicador-infra">
+            <div class="topo-indicador">
+              <span>QUADRO DOCENTE ATIVO</span>
+              <span class="emblema-status emblema-aviso">1 Com Choque</span>
+            </div>
+            <div class="valor-principal-indicador">14 Docentes</div>
+            <div class="barra-progresso-conteiner">
+              <div class="barra-progresso-preenchimento infra" style="width: 92%;"></div>
+            </div>
+            <div class="rodape-indicador">
+              <span>13 Com agenda validada</span>
+              <span>1 Requer ajuste (Prof. Ranilson)</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Divisão Principal em 2 Colunas de Blocos -->
+        <div class="grade-blocos-painel">
+          
+          <!-- Coluna Esquerda: Alertas Prioritários e Taxa de Ocupação -->
+          <div class="coluna-blocos-painel">
+            
+            <!-- Bloco: Alertas Críticos Ativos -->
+            <div class="cartao-superficie">
+              <div class="cabecalho-bloco">
+                <span class="titulo-bloco">⚠️ Alertas Críticos que Impedem o Fechamento da Grade</span>
+                <span class="emblema-status emblema-critico">3 Pendências</span>
+              </div>
+              <div class="corpo-bloco">
+                <div class="lista-alertas-prioritarios">
+                  
+                  <div class="item-alerta-prioritario borda-critica">
+                    <div>
+                      <div style="font-weight: 700; color: var(--cor-alerta-critico-texto);">
+                        ⛔ [Choque de Docente] Prof. Ranilson alocado simultaneamente em 2 turmas
+                      </div>
+                      <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 2px;">
+                        Conflito em <strong>Terça e Quinta (M3-M4: 09:20 - 11:00)</strong> entre <em>COMP203 (Lab 02)</em> e <em>COMP402 (Sala 102)</em>.
+                      </div>
+                    </div>
+                    <button class="botao-acao botao-primario" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+                      Resolver Conflito
+                    </button>
+                  </div>
+
+                  <div class="item-alerta-prioritario borda-infra">
+                    <div>
+                      <div style="font-weight: 700; color: var(--cor-alerta-infra-texto);">
+                        ⚠️ [Déficit de Infraestrutura & Capacidade] COMP308 - Sistemas Operacionais (Prática)
+                      </div>
+                      <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 2px;">
+                        Turma com <strong>45 matriculados</strong> e exigência de PCs alocada na <em>Sala 103 (30 lugares, sem computadores)</em>.
+                      </div>
+                    </div>
+                    <button class="botao-acao" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+                      Remanejar Sala
+                    </button>
+                  </div>
+
+                  <div class="item-alerta-prioritario borda-aviso">
+                    <div>
+                      <div style="font-weight: 700; color: var(--cor-alerta-aviso-texto);">
+                        📥 [Fila Pendente] 3 Turmas obrigatórias ainda sem horário/sala atribuídos
+                      </div>
+                      <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 2px;">
+                        <em>COMP201 (Algoritmos)</em>, <em>COMP304 (Redes)</em> e <em>COMP101 (Intro. à Computação)</em> aguardam alocação.
+                      </div>
+                    </div>
+                    <button class="botao-acao" onclick="navegarParaTela('tela-matriz', 'aba-matriz')">
+                      Alocar na Matriz
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Bloco: Ocupação por Categoria de Espaço e Turno -->
+            <div class="cartao-superficie">
+              <div class="cabecalho-bloco">
+                <span class="titulo-bloco">🏢 Taxa de Ocupação Física do Instituto de Computação por Turno</span>
+                <span class="emblema-status emblema-neutro">Média: 78%</span>
+              </div>
+              <div class="corpo-bloco">
+                <div class="grade-barras-ocupacao">
+                  
+                  <div class="item-ocupacao-bloco">
+                    <div class="cabecalho-ocupacao">
+                      <span>Laboratórios de Informática (Lab 01 e Lab 02) — Turno Matutino</span>
+                      <span style="color: var(--cor-alerta-critico-base);">95% (Saturado)</span>
+                    </div>
+                    <div class="barra-progresso-conteiner">
+                      <div class="barra-progresso-preenchimento critico" style="width: 95%;"></div>
+                    </div>
+                  </div>
+
+                  <div class="item-ocupacao-bloco">
+                    <div class="cabecalho-ocupacao">
+                      <span>Laboratórios de Informática (Lab 01 e Lab 02) — Turno Vespertino</span>
+                      <span style="color: var(--cor-alerta-infra-base);">80% (Alta Demanda)</span>
+                    </div>
+                    <div class="barra-progresso-conteiner">
+                      <div class="barra-progresso-preenchimento infra" style="width: 80%;"></div>
+                    </div>
+                  </div>
+
+                  <div class="item-ocupacao-bloco">
+                    <div class="cabecalho-ocupacao">
+                      <span>Salas de Aula Teóricas (Salas 101, 102 e 103) — Geral</span>
+                      <span style="color: var(--cor-primaria-hover);">72% (Equilibrado)</span>
+                    </div>
+                    <div class="barra-progresso-conteiner">
+                      <div class="barra-progresso-preenchimento" style="width: 72%;"></div>
+                    </div>
+                  </div>
+
+                  <div class="item-ocupacao-bloco">
+                    <div class="cabecalho-ocupacao">
+                      <span>Anfiteatro / Auditório IC (70 lugares) — Turmas de 1º Período</span>
+                      <span style="color: var(--cor-alerta-sucesso-base);">55% (Folga Disponível)</span>
+                    </div>
+                    <div class="barra-progresso-conteiner">
+                      <div class="barra-progresso-preenchimento sucesso" style="width: 55%;"></div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Coluna Direita: Progresso por Curso/Período e Ações Rápidas -->
+          <div class="coluna-blocos-painel">
+            
+            <!-- Bloco: Situação das Grades por Período -->
+            <div class="cartao-superficie">
+              <div class="cabecalho-bloco">
+                <span class="titulo-bloco">🎓 Status de Alocação por Período Curricular</span>
+                <button class="botao-acao botao-icone" onclick="navegarParaTela('tela-turmas', 'aba-turmas')">Ver Turmas</button>
+              </div>
+              <div class="conteiner-tabela" style="border: none;">
+                <table class="tabela-dados">
+                  <thead>
+                    <tr>
+                      <th>Período / Curso</th>
+                      <th>Turmas</th>
+                      <th>Alocadas</th>
+                      <th>Situação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>1º Período</strong> (CC / EC)</td>
+                      <td>4 turmas</td>
+                      <td>3 / 4</td>
+                      <td><span class="emblema-status emblema-aviso">1 Pendente</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>2º Período</strong> (CC / EC)</td>
+                      <td>4 turmas</td>
+                      <td>4 / 4</td>
+                      <td><span class="emblema-status emblema-sucesso">Concluído</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>3º Período</strong> (CC / EC)</td>
+                      <td>4 turmas</td>
+                      <td>3 / 4</td>
+                      <td><span class="emblema-status emblema-critico">Choque Docente</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>4º Período</strong> (CC / EC)</td>
+                      <td>3 turmas</td>
+                      <td>3 / 3</td>
+                      <td><span class="emblema-status emblema-sucesso">Concluído</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>5º Período</strong> (CC / EC)</td>
+                      <td>3 turmas</td>
+                      <td>2 / 3</td>
+                      <td><span class="emblema-status emblema-infra">Déficit Sala</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Bloco: Registro Operacional (Coordenação & Secretaria) -->
+            <div class="cartao-superficie">
+              <div class="cabecalho-bloco">
+                <span class="titulo-bloco">📋 Últimas Movimentações na Grade</span>
+              </div>
+              <div class="corpo-bloco" style="display: flex; flex-direction: column; gap: 8px; font-size: var(--tamanho-texto-pequeno);">
+                <div style="padding-bottom: 6px; border-bottom: 1px solid var(--cor-borda-suave);">
+                  <strong>Secretaria (Ana)</strong> atualizou a demanda de <em>COMP203 (Programação 3)</em> para <strong>42 alunos matriculados</strong>.
+                  <div style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-mutado);">Há 15 minutos • Gerou alerta de capacidade no Lab 02 (30 lugares)</div>
+                </div>
+                <div style="padding-bottom: 6px; border-bottom: 1px solid var(--cor-borda-suave);">
+                  <strong>Coordenação (Cordeiro)</strong> registrou restrição de manutenção no ar-condicionado da <em>Sala 103</em>.
+                  <div style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-mutado);">Há 1 hora • Sinalizado no cadastro de espaços físicos</div>
+                </div>
+                <div>
+                  <strong>Motor SATIC</strong> validou 12 alocações sem conflitos para os períodos iniciais.
+                  <div style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-mutado);">Hoje às 08:45 • Sem efeito dominó detectado</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Barra de Status -->
+      <footer class="barra-status">
+        <div class="barra-status-esquerda">
+          <span class="item-status"><span class="ponto-status-ativo"></span> Visão Executiva do Semestre 2026.2</span>
+          <span>|</span>
+          <span>Última sincronização de matrículas: Hoje, 14:20</span>
+        </div>
+        <div class="barra-status-direita">
+          <span>Instituto de Computação • UFAL</span>
+        </div>
+      </footer>
+    </section>
+
+
+    <!-- ====================================================================
+         TELA 2: MATRIZ DE ALOCAÇÃO DE HORÁRIOS (TIMETABLING GRID)
+         ==================================================================== -->
+    <main class="tela-conteudo ativa" id="tela-matriz">
+      
+      <!-- BARRA DE FERRAMENTAS DA MATRIZ -->
+      <div class="barra-ferramentas">
+        <div class="grupo-ferramentas">
+          <label class="rotulo-campo">Perspectiva da Grade:</label>
+          <select class="seletor-opcao" style="width: 210px;">
+            <option selected>Visão Geral do Bloco (Todas as Salas)</option>
+            <option>Filtro: Apenas Laboratórios (Lab 01/02)</option>
+            <option>Filtro: Salas Teóricas (101 a 103)</option>
+            <option>Visão por Docente: Prof. Ranilson</option>
+            <option>Visão por Curso: Ciência da Computação</option>
+          </select>
+
+          <label class="rotulo-campo" style="margin-left: 8px;">Turno:</label>
+          <select class="seletor-opcao" style="width: 145px;">
+            <option selected>Manhã + Tarde</option>
+            <option>Apenas Matutino</option>
+            <option>Apenas Vespertino</option>
+            <option>Apenas Noturno</option>
+          </select>
+        </div>
+
+        <div class="grupo-ferramentas">
+          <button class="botao-acao botao-primario" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+            ⚡ Assistente Anti-Efeito Dominó (3 Conflitos)
+          </button>
+          <button class="botao-acao" onclick="alternarGavetaInspecao()">
+            🔍 Recolher/Expandir Inspetor
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTÊINER DIVIDIDO: FILA DE TURMAS PENDENTES + MATRIZ DE HORÁRIOS -->
+      <div class="painel-divisor">
+        
+        <!-- PAINEL LATERAL ESQUERDO: DIAGNÓSTICO & FILA PENDENTE -->
+        <aside class="painel-lateral-dock">
+          
+          <!-- Bloco Superior: Diagnóstico de Restrições Críticas -->
+          <div class="painel-diagnostico-conflitos">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="titulo-bloco">
+                ⚠️ Resumo de Validação
+              </span>
+              <span class="emblema-status emblema-critico">3 Alertas</span>
+            </div>
+
+            <div class="resumo-metricas-conflito">
+              <div class="cartao-metrica cartao-metrica-critico" onclick="selecionarAlocacao('choque-ranilson')" style="cursor: pointer;">
+                <span class="valor-metrica">2</span>
+                <span class="rotulo-metrica">Choques de Horário</span>
+              </div>
+              <div class="cartao-metrica cartao-metrica-infra" onclick="selecionarAlocacao('infra-so')" style="cursor: pointer;">
+                <span class="valor-metrica">1</span>
+                <span class="rotulo-metrica">Déficit de Infra/Cap.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bloco Inferior: Fila de Turmas Pendentes de Alocação -->
+          <div class="cabecalho-bloco">
+            <span class="titulo-bloco">
+              📥 Turmas Não Alocadas (3)
+            </span>
+            <span class="emblema-status emblema-neutro">Backlog</span>
+          </div>
+
+          <div class="fila-turmas-pendentes">
+            <!-- Turma Pendente 1 -->
+            <div class="item-turma-pendente" draggable="true" onclick="navegarParaTela('tela-turmas', 'aba-turmas')">
+              <div style="display: flex; justify-content: space-between;">
+                <span class="codigo-turma">COMP201 • T. A</span>
+                <span class="emblema-status emblema-neutro">2º Per.</span>
+              </div>
+              <div class="nome-disciplina">Algoritmos e Estruturas de Dados</div>
+              <div class="meta-turma">
+                <span>👤 Prof. Baldoino</span>
+                <span>👥 45 alunos</span>
+                <span>🏢 Exige Lab</span>
+              </div>
+            </div>
+
+            <!-- Turma Pendente 2 -->
+            <div class="item-turma-pendente" draggable="true" onclick="navegarParaTela('tela-turmas', 'aba-turmas')">
+              <div style="display: flex; justify-content: space-between;">
+                <span class="codigo-turma">COMP304 • T. B</span>
+                <span class="emblema-status emblema-neutro">5º Per.</span>
+              </div>
+              <div class="nome-disciplina">Redes de Computadores</div>
+              <div class="meta-turma">
+                <span>👤 Prof. Willy</span>
+                <span>👥 35 alunos</span>
+                <span>🏢 Exige Lab</span>
+              </div>
+            </div>
+
+            <!-- Turma Pendente 3 -->
+            <div class="item-turma-pendente" draggable="true" onclick="navegarParaTela('tela-turmas', 'aba-turmas')">
+              <div style="display: flex; justify-content: space-between;">
+                <span class="codigo-turma">COMP101 • T. Única</span>
+                <span class="emblema-status emblema-neutro">1º Per.</span>
+              </div>
+              <div class="nome-disciplina">Introdução à Computação</div>
+              <div class="meta-turma">
+                <span>👤 Prof. Márcio</span>
+                <span>👥 60 alunos</span>
+                <span>🏢 Auditório / Sala Grande</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="separador-redimensionavel"></div>
+
+        <!-- ÁREA CENTRAL: MATRIZ DE HORÁRIOS (TIMETABLING MATRIX) -->
+        <div class="conteiner-matriz-alocacao">
+          
+          <div class="barra-filtros-grade">
+            <div>
+              <strong>Grade de Alocação Semestral (2026.2):</strong>
+              <span style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-left: 6px;">
+                Clique em qualquer célula alocada para inspecionar restrições no rodapé.
+              </span>
+            </div>
+            <div class="agrupamento-botoes">
+              <span class="emblema-status emblema-sucesso">● Regular</span>
+              <span class="emblema-status emblema-infra">● Violação de Infra/Capacidade</span>
+              <span class="emblema-status emblema-critico">● Choque Crítico de Horário</span>
+            </div>
+          </div>
+
+          <div class="viewport-grade-scroll">
+            <table class="grade-dados-matriz">
+              <thead>
+                <tr>
+                  <th class="cabecalho-canto">Horário / Slot</th>
+                  <th class="cabecalho-coluna-horario">Segunda-feira</th>
+                  <th class="cabecalho-coluna-horario">Terça-feira</th>
+                  <th class="cabecalho-coluna-horario">Quarta-feira</th>
+                  <th class="cabecalho-coluna-horario">Quinta-feira</th>
+                  <th class="cabecalho-coluna-horario">Sexta-feira</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Slot M1-M2 -->
+                <tr>
+                  <td class="cabecalho-linha-slot">
+                    <span class="codigo-slot">M1 - M2</span>
+                    <span class="intervalo-slot">07:30 - 09:10</span>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-valida" onclick="selecionarAlocacao('valida-bd')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP204 • T.A</span>
+                        <span class="emblema-status emblema-sucesso">OK</span>
+                      </div>
+                      <div class="disciplina-nome">Banco de Dados</div>
+                      <div class="docente-nome">Prof. Baldoino</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada">Sala 101</span>
+                        <span>38/45 al.</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-valida" onclick="selecionarAlocacao('valida-bd')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP105 • T.A</span>
+                        <span class="emblema-status emblema-sucesso">OK</span>
+                      </div>
+                      <div class="disciplina-nome">Lógica para Computação</div>
+                      <div class="docente-nome">Prof. Willy</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada">Sala 102</span>
+                        <span>36/40 al.</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-valida" onclick="selecionarAlocacao('valida-bd')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP204 • T.A</span>
+                        <span class="emblema-status emblema-sucesso">OK</span>
+                      </div>
+                      <div class="disciplina-nome">Banco de Dados</div>
+                      <div class="docente-nome">Prof. Baldoino</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada">Sala 101</span>
+                        <span>38/45 al.</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-valida" onclick="selecionarAlocacao('valida-bd')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP105 • T.A</span>
+                        <span class="emblema-status emblema-sucesso">OK</span>
+                      </div>
+                      <div class="disciplina-nome">Lógica para Computação</div>
+                      <div class="docente-nome">Prof. Willy</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada">Sala 102</span>
+                        <span>36/40 al.</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="slot-vazio-guia">+ Slot Livre</div>
+                  </td>
+                </tr>
+
+                <!-- Slot M3-M4: CHOQUE CRÍTICO DE PROFESSOR -->
+                <tr>
+                  <td class="cabecalho-linha-slot">
+                    <span class="codigo-slot">M3 - M4</span>
+                    <span class="intervalo-slot">09:20 - 11:00</span>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="slot-vazio-guia">+ Slot Livre</div>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-choque" onclick="selecionarAlocacao('choque-ranilson')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP203 • T.A</span>
+                        <span class="badge-conflito-card badge-choque-docente">CHOQUE DOCENTE</span>
+                      </div>
+                      <div class="disciplina-nome">Programação 3 + Eng. Soft.</div>
+                      <div class="docente-nome" style="color: var(--cor-alerta-critico-texto); font-weight: 700;">
+                        ⛔ Prof. Ranilson (2 Salas!)
+                      </div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada" style="background-color: #fee2e2;">Lab 02 & Sala 102</span>
+                        <span style="color: var(--cor-alerta-critico-texto); font-weight: 700;">42/30 al.</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="slot-vazio-guia">+ Slot Livre</div>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-choque" onclick="selecionarAlocacao('choque-ranilson')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP203 / COMP402</span>
+                        <span class="badge-conflito-card badge-choque-docente">CHOQUE DOCENTE</span>
+                      </div>
+                      <div class="disciplina-nome">Programação 3 + Eng. Soft.</div>
+                      <div class="docente-nome" style="color: var(--cor-alerta-critico-texto); font-weight: 700;">
+                        ⛔ Prof. Ranilson (2 Salas!)
+                      </div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada" style="background-color: #fee2e2;">Lab 02 & Sala 102</span>
+                        <span style="color: var(--cor-alerta-critico-texto); font-weight: 700;">Simultâneo</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="slot-vazio-guia">+ Slot Livre</div>
+                  </td>
+                </tr>
+
+                <!-- Slot M5-M6 -->
+                <tr>
+                  <td class="cabecalho-linha-slot">
+                    <span class="codigo-slot">M5 - M6</span>
+                    <span class="intervalo-slot">11:10 - 12:50</span>
+                  </td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                </tr>
+
+                <!-- Slot T1-T2: VIOLAÇÃO DE INFRAESTRUTURA / CAPACIDADE -->
+                <tr>
+                  <td class="cabecalho-linha-slot">
+                    <span class="codigo-slot">T1 - T2</span>
+                    <span class="intervalo-slot">13:30 - 15:10</span>
+                  </td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-valida" onclick="selecionarAlocacao('valida-bd')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP102 • T.B</span>
+                        <span class="emblema-status emblema-sucesso">OK</span>
+                      </div>
+                      <div class="disciplina-nome">Cálculo Diferencial I</div>
+                      <div class="docente-nome">Profª. Maria Helena</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada">Anfiteatro IC</span>
+                        <span>55/70 al.</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-infra" onclick="selecionarAlocacao('infra-so')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP308 • T.A</span>
+                        <span class="badge-conflito-card badge-deficit-capacidade">DÉFICIT CAP./INFRA</span>
+                      </div>
+                      <div class="disciplina-nome">Sistemas Operacionais (Prática)</div>
+                      <div class="docente-nome">Prof. Patrick</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada" style="background-color: #ffedd5;">Sala 103 (Sem PCs)</span>
+                        <span style="color: var(--cor-alerta-infra-texto); font-weight: 700;">45/30 al.!</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-infra" onclick="selecionarAlocacao('infra-so')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP308 • T.A</span>
+                        <span class="badge-conflito-card badge-deficit-capacidade">DÉFICIT CAP./INFRA</span>
+                      </div>
+                      <div class="disciplina-nome">Sistemas Operacionais (Prática)</div>
+                      <div class="docente-nome">Prof. Patrick</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada" style="background-color: #ffedd5;">Sala 103 (Sem PCs)</span>
+                        <span style="color: var(--cor-alerta-infra-texto); font-weight: 700;">45/30 al.!</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Slot T3-T4 -->
+                <tr>
+                  <td class="cabecalho-linha-slot">
+                    <span class="codigo-slot">T3 - T4</span>
+                    <span class="intervalo-slot">15:20 - 17:00</span>
+                  </td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-valida" onclick="selecionarAlocacao('valida-bd')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP302 • T.A</span>
+                        <span class="emblema-status emblema-sucesso">OK</span>
+                      </div>
+                      <div class="disciplina-nome">Compiladores</div>
+                      <div class="docente-nome">Prof. Márcio</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada">Lab 01</span>
+                        <span>28/35 al.</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                  <td class="celula-horario">
+                    <div class="cartao-alocacao cartao-alocacao-valida" onclick="selecionarAlocacao('valida-bd')">
+                      <div class="cartao-alocacao-topo">
+                        <span class="turma-codigo">COMP302 • T.A</span>
+                        <span class="emblema-status emblema-sucesso">OK</span>
+                      </div>
+                      <div class="disciplina-nome">Compiladores</div>
+                      <div class="docente-nome">Prof. Márcio</div>
+                      <div class="cartao-alocacao-rodape">
+                        <span class="sala-alocada">Lab 01</span>
+                        <span>28/35 al.</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="celula-horario"><div class="slot-vazio-guia">+ Slot Livre</div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- PAINEL INFERIOR: GAVETA DE INSPEÇÃO DE CONFLITOS -->
+          <div class="painel-gaveta-detalhes" id="gaveta-detalhes">
+            <div class="cabecalho-gaveta">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="titulo-bloco" style="font-size: var(--tamanho-texto-padrao);">
+                  🔍 Inspetor de Restrições da Célula Selecionada
+                </span>
+                <span class="emblema-status emblema-critico" id="rotulo-status-conflito">CHOQUE CRÍTICO DETECTADO</span>
+              </div>
+              <div class="agrupamento-botoes">
+                <button class="botao-acao botao-icone" onclick="alternarGavetaInspecao()">✕ Ocultar Inspetor</button>
+              </div>
+            </div>
+
+            <div class="corpo-gaveta-conflito" id="conteudo-inspecao">
+              <div class="cartao-superficie" style="padding: var(--espacamento-sm);">
+                <div style="font-weight: 700; color: var(--cor-texto-principal); font-size: var(--tamanho-texto-padrao);">
+                  Alocação Selecionada: COMP203 - Programação 3 (Turma A)
+                </div>
+                <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 4px;">
+                  • <strong>Docente:</strong> Prof. Ranilson (SIAPE: 2024389)<br>
+                  • <strong>Horário:</strong> Terça e Quinta (M3-M4: 09:20 às 11:00)<br>
+                  • <strong>Espaço Alocado:</strong> Lab 02 (Capacidade: 30 postos) | <strong>Matriculados:</strong> 42 alunos
+                </div>
+
+                <div class="agrupamento-botoes" style="margin-top: 10px;">
+                  <button class="botao-acao botao-primario" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+                    ⚡ Abrir Simulador Anti-Efeito Dominó
+                  </button>
+                  <button class="botao-acao" onclick="navegarParaTela('tela-turmas', 'aba-turmas')">
+                    ✏️ Editar Turma
+                  </button>
+                </div>
+              </div>
+
+              <div class="bloco-diagnostico-regras">
+                <span style="font-weight: 700; font-size: var(--tamanho-texto-pequeno); color: var(--cor-alerta-critico-texto);">
+                  Violações de Regras Identificadas pelo SATIC:
+                </span>
+                
+                <div class="item-regra-violada item-regra-violada-critica">
+                  <span>⛔</span>
+                  <div>
+                    <strong>[Regra Hard R1 - Choque de Horário Docente]:</strong> O <em>Prof. Ranilson</em> está alocado no mesmo horário (Terça/Quinta M3-M4) na turma <strong>COMP402 (Sala 102)</strong>.
+                  </div>
+                </div>
+
+                <div class="item-regra-violada item-regra-violada-infra">
+                  <span>⚠️</span>
+                  <div>
+                    <strong>[Regra Hard R2 - Superlotação de Laboratório]:</strong> 42 alunos matriculados para apenas 30 computadores disponíveis no <strong>Lab 02</strong>.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- BARRA DE STATUS INFERIOR -->
+      <footer class="barra-status">
+        <div class="barra-status-esquerda">
+          <span class="item-status"><span class="ponto-status-ativo"></span> Validador em Tempo Real Ativo</span>
+          <span>|</span>
+          <span>Turmas Alocadas: 15 de 18</span>
+        </div>
+        <div class="barra-status-direita">
+          <span style="color: #f87171; font-weight: 700;">⚠️ 2 Choques de Horário • 1 Violação de Infraestrutura</span>
+        </div>
+      </footer>
+    </main>
+
+
+    <!-- ====================================================================
+         TELA 3: GESTÃO DE ESPAÇOS FÍSICOS (SALAS & LABORATÓRIOS)
+         ==================================================================== -->
+    <section class="tela-conteudo" id="tela-espacos">
+      
+      <!-- BARRA DE FERRAMENTAS -->
+      <div class="barra-ferramentas">
+        <div class="grupo-ferramentas">
+          <input type="search" class="entrada-texto" placeholder="Filtrar espaço por nome, capacidade ou equipamento..." style="width: 300px;">
+          <select class="seletor-opcao" style="width: 190px;">
+            <option selected>Todas as Categorias</option>
+            <option>Laboratórios de Informática</option>
+            <option>Salas de Aula Teóricas</option>
+            <option>Anfiteatro / Auditório</option>
+          </select>
+        </div>
+        <div class="grupo-ferramentas">
+          <button class="botao-acao botao-primario">+ Cadastrar Novo Espaço Físico</button>
+        </div>
+      </div>
+
+      <!-- ESTRUTURA MESTRE-DETALHE -->
+      <div class="conteiner-gestao-salas">
+        
+        <!-- COLUNA ESQUERDA: LISTA ESTRUTURADA DE SALAS -->
+        <div class="painel-lista-salas">
+          <div class="cabecalho-bloco">
+            <span class="titulo-bloco">🏢 Inventário de Salas e Laboratórios (IC)</span>
+            <span class="emblema-status emblema-neutro">6 Espaços</span>
+          </div>
+
+          <div class="conteiner-tabela" style="border: none; flex: 1;">
+            <table class="tabela-dados" id="tabela-espacos">
+              <thead>
+                <tr>
+                  <th>Espaço</th>
+                  <th>Tipo</th>
+                  <th>Lotação</th>
+                  <th>Recursos Chave</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="linha-selecionada" onclick="selecionarLinhaTabela(this, 'tabela-espacos')">
+                  <td><strong>Lab 02</strong></td>
+                  <td>Laboratório Info</td>
+                  <td>30 lugares</td>
+                  <td>30 PCs, Proj., AC</td>
+                  <td><span class="emblema-status emblema-sucesso">Ativo</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-espacos')">
+                  <td><strong>Lab 01</strong></td>
+                  <td>Laboratório Info</td>
+                  <td>45 lugares</td>
+                  <td>45 PCs, Proj., AC</td>
+                  <td><span class="emblema-status emblema-sucesso">Ativo</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-espacos')">
+                  <td><strong>Sala 101</strong></td>
+                  <td>Sala Teórica</td>
+                  <td>45 lugares</td>
+                  <td>Projetor, AC, Quadro</td>
+                  <td><span class="emblema-status emblema-sucesso">Ativo</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-espacos')">
+                  <td><strong>Sala 102</strong></td>
+                  <td>Sala Teórica</td>
+                  <td>40 lugares</td>
+                  <td>Projetor, AC, Quadro</td>
+                  <td><span class="emblema-status emblema-sucesso">Ativo</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-espacos')">
+                  <td><strong>Sala 103</strong></td>
+                  <td>Sala Teórica</td>
+                  <td>30 lugares</td>
+                  <td>Quadro (AC em Manut.)</td>
+                  <td><span class="emblema-status emblema-aviso">Restrição</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-espacos')">
+                  <td><strong>Anfiteatro IC</strong></td>
+                  <td>Auditório</td>
+                  <td>70 lugares</td>
+                  <td>Som, Proj., AC, Rampa</td>
+                  <td><span class="emblema-status emblema-sucesso">Ativo</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="separador-redimensionavel"></div>
+
+        <!-- COLUNA DIREITA: FORMULÁRIO ESTRUTURADO EM BLOCOS LÓGICOS -->
+        <div class="painel-formulario-sala">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--espacamento-md);">
+            <div>
+              <h2 style="font-size: var(--tamanho-texto-subtitulo); font-weight: 700;">Ficha de Infraestrutura: Lab 02</h2>
+              <p style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario);">Parâmetros utilizados pelo motor de validação de capacidade e recursos</p>
+            </div>
+            <span class="emblema-status emblema-sucesso">Apto para Alocação</span>
+          </div>
+
+          <form onsubmit="event.preventDefault();">
+            
+            <!-- BLOCO 1: IDENTIFICAÇÃO BÁSICA -->
+            <fieldset class="agrupamento-campos">
+              <legend class="legenda-agrupamento">1. Identificação do Espaço Físico</legend>
+              <div class="grade-campos-tres-colunas">
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Código / Nome da Sala <span class="campo-obrigatorio">*</span></label>
+                  <input type="text" class="entrada-texto" value="Lab 02" required>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Bloco / Unidade Acadêmica <span class="campo-obrigatorio">*</span></label>
+                  <select class="seletor-opcao">
+                    <option selected>Instituto de Computação (Bloco IC)</option>
+                    <option>Bloco de Salas de Aula (Ciclo Básico)</option>
+                  </select>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Tipo de Ambiente <span class="campo-obrigatorio">*</span></label>
+                  <select class="seletor-opcao">
+                    <option selected>Laboratório de Informática (Prático)</option>
+                    <option>Sala de Aula Convencional (Teórica)</option>
+                    <option>Laboratório de Hardware / Redes</option>
+                    <option>Anfiteatro / Auditório</option>
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- BLOCO 2: CAPACIDADE E DIMENSÕES -->
+            <fieldset class="agrupamento-campos">
+              <legend class="legenda-agrupamento">2. Capacidade Física e Postos de Trabalho</legend>
+              <div class="grade-campos-tres-colunas">
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Capacidade Máxima (Assentos) <span class="campo-obrigatorio">*</span></label>
+                  <input type="number" class="entrada-texto" value="30" min="1" max="300" required>
+                  <span class="dica-campo">Limite rígido para validação contra matrículas</span>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Estações de Computador Funcionais</label>
+                  <input type="number" class="entrada-texto" value="30" min="0">
+                  <span class="dica-campo">Quantidade de PCs operacionais para alunos</span>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Localização / Pavimento</label>
+                  <select class="seletor-opcao">
+                    <option selected>Térreo (Acesso Direto / Sem Escadas)</option>
+                    <option>1º Pavimento Superior</option>
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- BLOCO 3: EQUIPAMENTOS E INFRAESTRUTURA -->
+            <fieldset class="agrupamento-campos">
+              <legend class="legenda-agrupamento">3. Recursos e Infraestrutura Instalada</legend>
+              <div class="seletor-recursos-grade">
+                <label class="cartao-checkbox-recurso">
+                  <input type="checkbox" class="caixa-selecao" checked>
+                  <span>🖥️ Computadores para Alunos</span>
+                </label>
+                <label class="cartao-checkbox-recurso">
+                  <input type="checkbox" class="caixa-selecao" checked>
+                  <span>📽️ Projetor Multimídia HDMI</span>
+                </label>
+                <label class="cartao-checkbox-recurso">
+                  <input type="checkbox" class="caixa-selecao" checked>
+                  <span>❄️ Ar-condicionado Operacional</span>
+                </label>
+                <label class="cartao-checkbox-recurso">
+                  <input type="checkbox" class="caixa-selecao" checked>
+                  <span>🌐 Rede Cabeada & Acesso Internet</span>
+                </label>
+                <label class="cartao-checkbox-recurso">
+                  <input type="checkbox" class="caixa-selecao" checked>
+                  <span>♿ Acessibilidade (PNE / Cadeirante)</span>
+                </label>
+                <label class="cartao-checkbox-recurso">
+                  <input type="checkbox" class="caixa-selecao" checked>
+                  <span>🖊️ Quadro Branco Panorâmico</span>
+                </label>
+                <label class="cartao-checkbox-recurso">
+                  <input type="checkbox" class="caixa-selecao">
+                  <span>🔊 Sistema de Som / Microfone</span>
+                </label>
+                <label class="cartao-checkbox-recurso">
+                  <input type="checkbox" class="caixa-selecao">
+                  <span>🔌 Bancadas de Eletrônica/Hardware</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <!-- BLOCO 4: STATUS E OBSERVAÇÕES -->
+            <fieldset class="agrupamento-campos">
+              <legend class="legenda-agrupamento">4. Disponibilidade Operacional e Observações</legend>
+              <div class="grade-campos-duas-colunas">
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Status no Semestre 2026.2</label>
+                  <select class="seletor-opcao">
+                    <option selected>Disponível para Alocação de Graduação</option>
+                    <option>Com Restrição Parcial (Equipamento em Manutenção)</option>
+                    <option>Interditado Temporariamente (Reforma/Manutenção)</option>
+                  </select>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Notas da Secretaria / Coordenação</label>
+                  <input type="text" class="entrada-texto" value="Laboratório com 30 máquinas i7. Turmas acima de 30 alunos devem ir para o Lab 01.">
+                </div>
+              </div>
+            </fieldset>
+
+            <div class="agrupamento-botoes-fim">
+              <button type="button" class="botao-acao botao-perigo">Interditar Espaço</button>
+              <button type="button" class="botao-acao">Descartar Alterações</button>
+              <button type="submit" class="botao-acao botao-primario">💾 Salvar Cadastro do Espaço</button>
+            </div>
+          </form>
+
+        </div>
+
+      </div>
+
+      <footer class="barra-status">
+        <div class="barra-status-esquerda">
+          <span>Gestão de Espaços Físicos • Instituto de Computação</span>
+          <span>|</span>
+          <span>6 ambientes cadastrados (250 lugares totais)</span>
+        </div>
+        <div class="barra-status-direita">
+          <span>Validação de capacidade ativa</span>
+        </div>
+      </footer>
+    </section>
+
+
+    <!-- ====================================================================
+         TELA 4: GESTÃO DE TURMAS & DISCIPLINAS
+         ==================================================================== -->
+    <section class="tela-conteudo" id="tela-turmas">
+      
+      <!-- BARRA DE FERRAMENTAS -->
+      <div class="barra-ferramentas">
+        <div class="grupo-ferramentas">
+          <input type="search" class="entrada-texto" placeholder="Buscar por código (ex: COMP203) ou disciplina..." style="width: 280px;">
+          <select class="seletor-opcao" style="width: 190px;">
+            <option selected>Todos os Cursos (CC + EC)</option>
+            <option>Ciência da Computação</option>
+            <option>Engenharia de Computação</option>
+          </select>
+          <select class="seletor-opcao" style="width: 150px;">
+            <option selected>Todos os Períodos</option>
+            <option>1º Período</option>
+            <option>3º Período</option>
+            <option>5º Período</option>
+          </select>
+        </div>
+        <div class="grupo-ferramentas">
+          <button class="botao-acao botao-primario">+ Nova Turma para 2026.2</button>
+        </div>
+      </div>
+
+      <!-- CONTÊINER EM 3 COLUNAS: LISTA DE TURMAS + FORMULÁRIO EM BLOCOS + VIABILIDADE -->
+      <div class="conteiner-gestao-turmas">
+        
+        <!-- COLUNA 1: LISTA MESTRE DE TURMAS OFERTADAS -->
+        <div class="painel-lista-turmas">
+          <div class="cabecalho-bloco">
+            <span class="titulo-bloco">📚 Oferta de Turmas (2026.2)</span>
+            <span class="emblema-status emblema-neutro">18 Turmas</span>
+          </div>
+          <div class="conteiner-tabela" style="border: none; flex: 1;">
+            <table class="tabela-dados" id="tabela-turmas">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Disciplina</th>
+                  <th>Matr.</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="linha-selecionada" onclick="selecionarLinhaTabela(this, 'tabela-turmas')">
+                  <td><strong>COMP203-A</strong></td>
+                  <td>Programação 3</td>
+                  <td>42 al.</td>
+                  <td><span class="emblema-status emblema-critico">Choque</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-turmas')">
+                  <td><strong>COMP402-B</strong></td>
+                  <td>Eng. de Software</td>
+                  <td>35 al.</td>
+                  <td><span class="emblema-status emblema-critico">Choque</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-turmas')">
+                  <td><strong>COMP308-A</strong></td>
+                  <td>Sist. Operacionais</td>
+                  <td>45 al.</td>
+                  <td><span class="emblema-status emblema-infra">Déficit Infra</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-turmas')">
+                  <td><strong>COMP204-A</strong></td>
+                  <td>Banco de Dados</td>
+                  <td>38 al.</td>
+                  <td><span class="emblema-status emblema-sucesso">Alocada</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-turmas')">
+                  <td><strong>COMP302-A</strong></td>
+                  <td>Compiladores</td>
+                  <td>28 al.</td>
+                  <td><span class="emblema-status emblema-sucesso">Alocada</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-turmas')">
+                  <td><strong>COMP201-A</strong></td>
+                  <td>Algoritmos e ED</td>
+                  <td>45 al.</td>
+                  <td><span class="emblema-status emblema-aviso">Na Fila</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-turmas')">
+                  <td><strong>COMP304-B</strong></td>
+                  <td>Redes de Comp.</td>
+                  <td>35 al.</td>
+                  <td><span class="emblema-status emblema-aviso">Na Fila</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="separador-redimensionavel"></div>
+
+        <!-- COLUNA 2: FORMULÁRIO DE TURMA ESTRUTURADO EM BLOCOS -->
+        <div class="painel-formulario-turma">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--espacamento-md);">
+            <div>
+              <h2 style="font-size: var(--tamanho-texto-subtitulo); font-weight: 700;">Turma: COMP203 - Programação 3 (Turma A)</h2>
+              <p style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario);">Configuração de demanda discente, docente responsável e exigências de sala</p>
+            </div>
+            <span class="emblema-status emblema-critico">Possui Conflito Ativo</span>
+          </div>
+
+          <form onsubmit="event.preventDefault();">
+            
+            <!-- BLOCO 1: DADOS ACADÊMICOS -->
+            <fieldset class="agrupamento-campos">
+              <legend class="legenda-agrupamento">1. Dados Acadêmicos e Curriculares</legend>
+              <div class="grade-campos-tres-colunas">
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Código Curricular <span class="campo-obrigatorio">*</span></label>
+                  <input type="text" class="entrada-texto" value="COMP203" required>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Nome da Disciplina <span class="campo-obrigatorio">*</span></label>
+                  <input type="text" class="entrada-texto" value="Programação 3" required>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Identificação da Turma <span class="campo-obrigatorio">*</span></label>
+                  <input type="text" class="entrada-texto" value="Turma A" required>
+                </div>
+              </div>
+
+              <div class="grade-campos-tres-colunas" style="margin-top: var(--espacamento-sm);">
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Curso Vinculado</label>
+                  <select class="seletor-opcao">
+                    <option selected>Ciência da Computação</option>
+                    <option>Engenharia de Computação</option>
+                    <option>Oferta Compartilhada (CC + EC)</option>
+                  </select>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Período na Grade</label>
+                  <select class="seletor-opcao">
+                    <option selected>3º Período (Obrigatória)</option>
+                    <option>1º Período</option>
+                    <option>2º Período</option>
+                    <option>4º Período</option>
+                    <option>Eletiva</option>
+                  </select>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Carga Horária Semanal</label>
+                  <select class="seletor-opcao">
+                    <option selected>60h (4 créditos - 2 encontros de 2h)</option>
+                    <option>30h (2 créditos - 1 encontro de 2h)</option>
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- BLOCO 2: DEMANDA DE ALUNOS -->
+            <fieldset class="agrupamento-campos">
+              <legend class="legenda-agrupamento">2. Demanda de Alunos e Vagas</legend>
+              <div class="grade-campos-tres-colunas">
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Vagas Ofertadas <span class="campo-obrigatorio">*</span></label>
+                  <input type="number" class="entrada-texto" value="45" required>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Alunos Matriculados <span class="campo-obrigatorio">*</span></label>
+                  <input type="number" class="entrada-texto" value="42" required>
+                  <span class="dica-campo">Número utilizado para validar capacidade da sala</span>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Reserva p/ Reajuste</label>
+                  <input type="number" class="entrada-texto" value="3">
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- BLOCO 3: REQUISITOS DE ESPAÇO FÍSICO -->
+            <fieldset class="agrupamento-campos">
+              <legend class="legenda-agrupamento">3. Requisitos de Infraestrutura da Disciplina</legend>
+              <div class="grade-campos-duas-colunas">
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Natureza do Espaço Exigido <span class="campo-obrigatorio">*</span></label>
+                  <select class="seletor-opcao">
+                    <option selected>Obrigatório Laboratório de Informática (PCs)</option>
+                    <option>Sala de Aula Teórica Convencional</option>
+                    <option>Auditório / Anfiteatro</option>
+                  </select>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Espaço Físico Atualmente Atribuído</label>
+                  <select class="seletor-opcao">
+                    <option selected>Lab 02 (Cap: 30 — ⚠️ Insuficiente para 42 alunos)</option>
+                    <option>Lab 01 (Cap: 45 — ✅ Compatível)</option>
+                    <option>Sala 101 (Cap: 45 — ⚠️ Sem PCs)</option>
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- BLOCO 4: DOCENTE E HORÁRIOS -->
+            <fieldset class="agrupamento-campos">
+              <legend class="legenda-agrupamento">4. Docente Responsável e Horários da Turma</legend>
+              <div class="grade-campos-duas-colunas">
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Professor Titular <span class="campo-obrigatorio">*</span></label>
+                  <select class="seletor-opcao">
+                    <option selected>Prof. Ranilson</option>
+                    <option>Prof. Baldoino</option>
+                    <option>Prof. Willy</option>
+                    <option>Prof. Patrick</option>
+                    <option>Profª. Maria Helena</option>
+                  </select>
+                </div>
+                <div class="campo-formulario">
+                  <label class="rotulo-campo">Slots de Horário Designados</label>
+                  <select class="seletor-opcao">
+                    <option selected>Terça e Quinta • M3-M4 (09:20 - 11:00) [⚠️ Em Choque]</option>
+                    <option>Segunda e Quarta • T1-T2 (13:30 - 15:10) [✅ Livre]</option>
+                    <option>Segunda e Quarta • M3-M4 (09:20 - 11:00) [✅ Livre]</option>
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <div class="agrupamento-botoes-fim">
+              <button type="button" class="botao-acao botao-perigo">Remover Turma</button>
+              <button type="button" class="botao-acao" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">Resolver Conflito na Central</button>
+              <button type="submit" class="botao-acao botao-primario">💾 Salvar Dados da Turma</button>
+            </div>
+          </form>
+
+        </div>
+
+        <div class="separador-redimensionavel"></div>
+
+        <!-- COLUNA 3: PAINEL DE VIABILIDADE EM TEMPO REAL -->
+        <aside class="painel-resumo-validacao-turma">
+          <div class="cabecalho-bloco" style="background: none; padding: 0 0 var(--espacamento-sm) 0;">
+            <span class="titulo-bloco">⚡ Diagnóstico da Turma</span>
+            <span class="emblema-status emblema-critico">2 Violações</span>
+          </div>
+
+          <div class="cartao-alerta cartao-alerta-critico">
+            <span class="icone-alerta">⛔</span>
+            <div class="conteudo-alerta">
+              <span class="titulo-alerta">Choque de Horário Docente</span>
+              <span>O Prof. Ranilson já está alocado em COMP402 na Terça e Quinta (M3-M4).</span>
+            </div>
+          </div>
+
+          <div class="cartao-alerta cartao-alerta-infra">
+            <span class="icone-alerta">⚠️</span>
+            <div class="conteudo-alerta">
+              <span class="titulo-alerta">Déficit de Capacidade Física</span>
+              <span>A turma possui 42 alunos, mas o Lab 02 comporta apenas 30 alunos (-12 lugares).</span>
+            </div>
+          </div>
+
+          <div class="cartao-superficie" style="padding: var(--espacamento-sm); background-color: #f0fdf4; border-color: #86efac;">
+            <span style="font-weight: 700; color: #166534; font-size: var(--tamanho-texto-pequeno);">
+              💡 Recomendação do SATIC:
+            </span>
+            <p style="font-size: var(--tamanho-texto-micro); color: #15803d; margin-top: 4px; line-height: 1.35;">
+              Transferir para o <strong>Lab 01 (45 lugares)</strong> nos horários <strong>Segunda e Quarta (M3-M4)</strong>. Atende aos 42 alunos em laboratório e elimina o choque do docente.
+            </p>
+            <button class="botao-acao botao-sucesso" style="width: 100%; margin-top: 8px;" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+              Simular e Aplicar Ajuste
+            </button>
+          </div>
+        </aside>
+
+      </div>
+
+      <footer class="barra-status">
+        <div class="barra-status-esquerda">
+          <span>Gestão de Oferta Acadêmica • Semestre 2026.2</span>
+          <span>|</span>
+          <span>18 Turmas Cadastradas</span>
+        </div>
+        <div class="barra-status-direita">
+          <span>Validação automática contra capacidade das salas</span>
+        </div>
+      </footer>
+    </section>
+
+
+    <!-- ====================================================================
+         TELA 5: GESTÃO DE PROFESSORES & DISPONIBILIDADE DE HORÁRIOS
+         ==================================================================== -->
+    <section class="tela-conteudo" id="tela-professores">
+      
+      <!-- BARRA DE FERRAMENTAS -->
+      <div class="barra-ferramentas">
+        <div class="grupo-ferramentas">
+          <input type="search" class="entrada-texto" placeholder="Buscar docente por nome ou matrícula SIAPE..." style="width: 300px;">
+          <select class="seletor-opcao" style="width: 185px;">
+            <option selected>Todos os Docentes (14)</option>
+            <option>Com Choque de Horário (1)</option>
+            <option>Com Carga Completa (11)</option>
+            <option>Com Horas Disponíveis (2)</option>
+          </select>
+        </div>
+        <div class="grupo-ferramentas">
+          <button class="botao-acao botao-primario">+ Cadastrar Novo Docente</button>
+        </div>
+      </div>
+
+      <!-- ESTRUTURA MESTRE-DETALHE DE PROFESSORES -->
+      <div class="conteiner-gestao-professores">
+        
+        <!-- COLUNA ESQUERDA: LISTA DE PROFESSORES -->
+        <div class="painel-lista-professores">
+          <div class="cabecalho-bloco">
+            <span class="titulo-bloco">👨‍🏫 Corpo Docente do IC</span>
+            <span class="emblema-status emblema-neutro">14 Ativos</span>
+          </div>
+
+          <div class="conteiner-tabela" style="border: none; flex: 1;">
+            <table class="tabela-dados" id="tabela-professores">
+              <thead>
+                <tr>
+                  <th>Docente</th>
+                  <th>Turmas</th>
+                  <th>Carga</th>
+                  <th>Situação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="linha-selecionada" onclick="selecionarLinhaTabela(this, 'tabela-professores')">
+                  <td>
+                    <strong>Prof. Ranilson</strong>
+                    <div style="font-size: 11px; color: var(--cor-texto-mutado);">SIAPE: 2024389</div>
+                  </td>
+                  <td>2 turmas</td>
+                  <td>8h / 12h</td>
+                  <td><span class="emblema-status emblema-critico">Choque M3-M4</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-professores')">
+                  <td>
+                    <strong>Prof. Baldoino</strong>
+                    <div style="font-size: 11px; color: var(--cor-texto-mutado);">SIAPE: 1849201</div>
+                  </td>
+                  <td>2 turmas</td>
+                  <td>8h / 12h</td>
+                  <td><span class="emblema-status emblema-sucesso">Regular</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-professores')">
+                  <td>
+                    <strong>Prof. Willy</strong>
+                    <div style="font-size: 11px; color: var(--cor-texto-mutado);">SIAPE: 1930412</div>
+                  </td>
+                  <td>2 turmas</td>
+                  <td>8h / 12h</td>
+                  <td><span class="emblema-status emblema-sucesso">Regular</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-professores')">
+                  <td>
+                    <strong>Prof. Patrick</strong>
+                    <div style="font-size: 11px; color: var(--cor-texto-mutado);">SIAPE: 2104938</div>
+                  </td>
+                  <td>2 turmas</td>
+                  <td>8h / 12h</td>
+                  <td><span class="emblema-status emblema-sucesso">Regular</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-professores')">
+                  <td>
+                    <strong>Profª. Maria Helena</strong>
+                    <div style="font-size: 11px; color: var(--cor-texto-mutado);">SIAPE: 1748290</div>
+                  </td>
+                  <td>2 turmas</td>
+                  <td>8h / 12h</td>
+                  <td><span class="emblema-status emblema-sucesso">Regular</span></td>
+                </tr>
+                <tr onclick="selecionarLinhaTabela(this, 'tabela-professores')">
+                  <td>
+                    <strong>Prof. Márcio</strong>
+                    <div style="font-size: 11px; color: var(--cor-texto-mutado);">SIAPE: 1659302</div>
+                  </td>
+                  <td>2 turmas</td>
+                  <td>8h / 12h</td>
+                  <td><span class="emblema-status emblema-sucesso">Regular</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="separador-redimensionavel"></div>
+
+        <!-- COLUNA DIREITA: FORMULÁRIO DO DOCENTE E GRADE DE DISPONIBILIDADE -->
+        <div class="painel-formulario-professor">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--espacamento-md);">
+            <div>
+              <h2 style="font-size: var(--tamanho-texto-subtitulo); font-weight: 700;">Perfil e Disponibilidade: Prof. Ranilson</h2>
+              <p style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario);">Controle de janelas de horário disponíveis, restrições administrativas e turmas atribuídas</p>
+            </div>
+            <span class="emblema-status emblema-critico">1 Choque de Horário Detectado</span>
+          </div>
+
+          <!-- BLOCO 1: IDENTIFICAÇÃO E LIMITES DE CARGA -->
+          <fieldset class="agrupamento-campos">
+            <legend class="legenda-agrupamento">1. Dados Funcionais e Limites de Carga Horária</legend>
+            <div class="grade-campos-quatro-colunas">
+              <div class="campo-formulario">
+                <label class="rotulo-campo">Nome do Docente <span class="campo-obrigatorio">*</span></label>
+                <input type="text" class="entrada-texto" value="Prof. Ranilson" required>
+              </div>
+              <div class="campo-formulario">
+                <label class="rotulo-campo">Matrícula SIAPE <span class="campo-obrigatorio">*</span></label>
+                <input type="text" class="entrada-texto" value="2024389" required>
+              </div>
+              <div class="campo-formulario">
+                <label class="rotulo-campo">Regime de Trabalho</label>
+                <select class="seletor-opcao">
+                  <option selected>Dedicação Exclusiva (40h DE)</option>
+                  <option>Tempo Parcial (20h)</option>
+                </select>
+              </div>
+              <div class="campo-formulario">
+                <label class="rotulo-campo">Carga Semanal Máx. em Aula</label>
+                <select class="seletor-opcao">
+                  <option selected>12 horas semanais (3 turmas)</option>
+                  <option>8 horas semanais (2 turmas)</option>
+                  <option>16 horas semanais (4 turmas)</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- BLOCO 2: MATRIZ SEMANAL DE DISPONIBILIDADE DO PROFESSOR -->
+          <fieldset class="agrupamento-campos">
+            <legend class="legenda-agrupamento">2. Matriz de Disponibilidade e Alocação do Docente (Clique para alternar disponibilidade)</legend>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: var(--tamanho-texto-micro);">
+              <span>Esta grade alimenta automaticamente o validador de choques de horários do SATIC.</span>
+              <div class="agrupamento-botoes">
+                <span class="emblema-status emblema-sucesso">■ Preferencial</span>
+                <span class="emblema-status emblema-neutro">■ Disponível</span>
+                <span class="emblema-status" style="background: #e0f2fe; color: #0369a1;">■ Aula Alocada</span>
+                <span class="emblema-status emblema-critico">■ Choque Simultâneo</span>
+              </div>
+            </div>
+
+            <table class="grade-disponibilidade-docente">
+              <thead>
+                <tr>
+                  <th>Slot / Horário</th>
+                  <th>Segunda-feira</th>
+                  <th>Terça-feira</th>
+                  <th>Quarta-feira</th>
+                  <th>Quinta-feira</th>
+                  <th>Sexta-feira</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="slot-rotulo">M1-M2 (07:30)</td>
+                  <td class="celula-disp disp-disponivel" onclick="alternarCelulaDisp(this)">Disponível</td>
+                  <td class="celula-disp disp-disponivel" onclick="alternarCelulaDisp(this)">Disponível</td>
+                  <td class="celula-disp disp-disponivel" onclick="alternarCelulaDisp(this)">Disponível</td>
+                  <td class="celula-disp disp-disponivel" onclick="alternarCelulaDisp(this)">Disponível</td>
+                  <td class="celula-disp disp-indisponivel" onclick="alternarCelulaDisp(this)">Reunião Colegiado</td>
+                </tr>
+                <tr>
+                  <td class="slot-rotulo">M3-M4 (09:20)</td>
+                  <td class="celula-disp disp-preferencial" onclick="alternarCelulaDisp(this)">★ Preferencial (Livre)</td>
+                  <td class="celula-disp disp-choque" title="Choque entre COMP203 e COMP402!">⛔ CHOQUE: COMP203 + COMP402</td>
+                  <td class="celula-disp disp-preferencial" onclick="alternarCelulaDisp(this)">★ Preferencial (Livre)</td>
+                  <td class="celula-disp disp-choque" title="Choque entre COMP203 e COMP402!">⛔ CHOQUE: COMP203 + COMP402</td>
+                  <td class="celula-disp disp-indisponivel" onclick="alternarCelulaDisp(this)">Reunião Colegiado</td>
+                </tr>
+                <tr>
+                  <td class="slot-rotulo">T1-T2 (13:30)</td>
+                  <td class="celula-disp disp-preferencial" onclick="alternarCelulaDisp(this)">★ Preferencial (Livre)</td>
+                  <td class="celula-disp disp-preferencial" onclick="alternarCelulaDisp(this)">★ Preferencial (Livre)</td>
+                  <td class="celula-disp disp-preferencial" onclick="alternarCelulaDisp(this)">★ Preferencial (Livre)</td>
+                  <td class="celula-disp disp-preferencial" onclick="alternarCelulaDisp(this)">★ Preferencial (Livre)</td>
+                  <td class="celula-disp disp-disponivel" onclick="alternarCelulaDisp(this)">Disponível</td>
+                </tr>
+                <tr>
+                  <td class="slot-rotulo">T3-T4 (15:20)</td>
+                  <td class="celula-disp disp-disponivel" onclick="alternarCelulaDisp(this)">Disponível</td>
+                  <td class="celula-disp disp-indisponivel" onclick="alternarCelulaDisp(this)">Orientação Pós (PPGI)</td>
+                  <td class="celula-disp disp-disponivel" onclick="alternarCelulaDisp(this)">Disponível</td>
+                  <td class="celula-disp disp-indisponivel" onclick="alternarCelulaDisp(this)">Orientação Pós (PPGI)</td>
+                  <td class="celula-disp disp-indisponivel" onclick="alternarCelulaDisp(this)">Indisponível</td>
+                </tr>
+              </tbody>
+            </table>
+          </fieldset>
+
+          <!-- BLOCO 3: TURMAS ATRIBUÍDAS AO DOCENTE -->
+          <fieldset class="agrupamento-campos">
+            <legend class="legenda-agrupamento">3. Turmas Vinculadas no Semestre 2026.2</legend>
+            <div class="conteiner-tabela">
+              <table class="tabela-dados">
+                <thead>
+                  <tr>
+                    <th>Código / Turma</th>
+                    <th>Disciplina</th>
+                    <th>Horário Atual</th>
+                    <th>Espaço Alocado</th>
+                    <th>Validação de Agenda</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>COMP203 • T.A</strong></td>
+                    <td>Programação 3</td>
+                    <td>Ter / Qui • M3-M4</td>
+                    <td>Lab 02 (30 lug.)</td>
+                    <td><span class="emblema-status emblema-critico">Choque com COMP402</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>COMP402 • T.B</strong></td>
+                    <td>Engenharia de Software</td>
+                    <td>Ter / Qui • M3-M4</td>
+                    <td>Sala 102 (40 lug.)</td>
+                    <td><span class="emblema-status emblema-critico">Choque com COMP203</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </fieldset>
+
+          <div class="agrupamento-botoes-fim">
+            <button type="button" class="botao-acao" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">⚡ Resolver Choque de Agenda</button>
+            <button type="button" class="botao-acao botao-primario">💾 Salvar Disponibilidade do Docente</button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <footer class="barra-status">
+        <div class="barra-status-esquerda">
+          <span>Gestão de Docentes e Restrições de Horário • IC UFAL</span>
+        </div>
+        <div class="barra-status-direita">
+          <span>Verificação automática de superposição de horários</span>
+        </div>
+      </footer>
+    </section>
+
+
+    <!-- ====================================================================
+         TELA 6: CENTRAL DE RESOLUÇÃO DE CONFLITOS (ANTI-EFEITO DOMINÓ) & PUBLICAÇÃO
+         ==================================================================== -->
+    <section class="tela-conteudo" id="tela-conflitos">
+      
+      <!-- BARRA DE FERRAMENTAS -->
+      <div class="barra-ferramentas">
+        <div class="grupo-ferramentas">
+          <span class="titulo-bloco">⚡ Motor de Validação de Restrições e Mitigação de Efeito Dominó</span>
+          <span class="emblema-status emblema-critico">3 Conflitos Impeditivos Ativos</span>
+        </div>
+        <div class="grupo-ferramentas">
+          <button class="botao-acao">🔄 Revalidar Toda a Grade</button>
+          <button class="botao-acao botao-sucesso" onclick="alert('A publicação oficial só é liberada após zerar os conflitos críticos (Hard Constraints).')">
+            📢 Publicar Grade Final 2026.2
+          </button>
+        </div>
+      </div>
+
+      <div class="conteiner-central-conflitos">
+        
+        <!-- DIVISÃO SUPERIOR: FILA DE CONFLITOS + SIMULADOR DE RESOLUÇÃO SEM EFEITO DOMINÓ -->
+        <div class="grade-conflitos-simulador">
+          
+          <!-- Coluna Esquerda: Lista de Conflitos Detectados -->
+          <div class="cartao-superficie">
+            <div class="cabecalho-bloco">
+              <span class="titulo-bloco">🚨 Fila de Conflitos Detectados na Grade</span>
+              <span class="emblema-status emblema-neutro">Selecione para Simular</span>
+            </div>
+            <div class="corpo-bloco">
+              <div class="lista-conflitos-ativos">
+                
+                <!-- Conflito 1 -->
+                <div class="item-conflito-selecionavel severidade-critica selecionado" onclick="selecionarConflitoCentral('conflito-1', this)">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span class="emblema-status emblema-critico">CRÍTICO • HARD CONSTRAINT #01</span>
+                    <span style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-mutado);">Terça e Quinta (M3-M4)</span>
+                  </div>
+                  <div style="font-weight: 700; font-size: var(--tamanho-texto-destaque); color: var(--cor-alerta-critico-texto);">
+                    Choque de Horário Docente + Superlotação (Prof. Ranilson)
+                  </div>
+                  <p style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 4px;">
+                    <strong>COMP203 (Programação 3 - 42 alunos)</strong> e <strong>COMP402 (Eng. Software - 35 alunos)</strong> estão alocadas no mesmo horário para o Prof. Ranilson. Além disso, COMP203 excede a lotação do Lab 02 (30 lugares).
+                  </p>
+                </div>
+
+                <!-- Conflito 2 -->
+                <div class="item-conflito-selecionavel severidade-infra" onclick="selecionarConflitoCentral('conflito-2', this)">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span class="emblema-status emblema-infra">INFRAESTRUTURA • HARD CONSTRAINT #02</span>
+                    <span style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-mutado);">Quarta e Sexta (T1-T2)</span>
+                  </div>
+                  <div style="font-weight: 700; font-size: var(--tamanho-texto-destaque); color: var(--cor-alerta-infra-texto);">
+                    Disciplina Prática em Sala Teórica e com Capacidade Inferior
+                  </div>
+                  <p style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 4px;">
+                    <strong>COMP308 (Sistemas Operacionais - 45 alunos)</strong> exige laboratório de informática, mas está alocada na <strong>Sala 103</strong> (sala teórica sem PCs e com apenas 30 lugares).
+                  </p>
+                </div>
+
+                <!-- Conflito 3 -->
+                <div class="item-conflito-selecionavel severidade-aviso" onclick="selecionarConflitoCentral('conflito-3', this)">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span class="emblema-status emblema-aviso">PENDÊNCIA DE OFERTA • #03</span>
+                    <span style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-mutado);">3 Turmas na Fila</span>
+                  </div>
+                  <div style="font-weight: 700; font-size: var(--tamanho-texto-destaque); color: var(--cor-alerta-aviso-texto);">
+                    Turmas Obrigatórias Aguardando Alocação de Espaço
+                  </div>
+                  <p style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 4px;">
+                    <strong>COMP201 (Algoritmos)</strong>, <strong>COMP304 (Redes)</strong> e <strong>COMP101 (Intro. à Computação)</strong> precisam ser posicionadas sem gerar colisão com turmas do mesmo período.
+                  </p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Coluna Direita: Simulador Anti-Efeito Dominó -->
+          <div class="cartao-superficie" id="painel-simulador-direita">
+            <div class="cabecalho-bloco">
+              <span class="titulo-bloco">🛡️ Simulador de Remanejamento (Prevenção de Efeito Dominó)</span>
+              <span class="emblema-status emblema-sucesso">2 Soluções Seguras Calculadas</span>
+            </div>
+            <div class="corpo-bloco" id="corpo-simulador-conflito">
+              
+              <div style="margin-bottom: var(--espacamento-md); padding: var(--espacamento-sm) var(--espacamento-md); background-color: #f8fafc; border: 1px solid var(--cor-borda-suave); border-radius: var(--raio-borda-padrao);">
+                <div style="font-weight: 700; font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario);">
+                  CONFLITO EM ANÁLISE:
+                </div>
+                <div style="font-size: var(--tamanho-texto-destaque); font-weight: 700; margin-top: 2px;">
+                  Choque Simultâneo: Prof. Ranilson (COMP203 vs COMP402) + Lotação Lab 02
+                </div>
+              </div>
+
+              <!-- Proposta A (Recomendada) -->
+              <div class="cartao-proposta-solucao recomendada">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 700; color: #166534; font-size: var(--tamanho-texto-destaque);">
+                    ✅ Solução Recomendada A (Impacto Dominó: ZERO novos conflitos)
+                  </span>
+                  <span class="emblema-status emblema-sucesso">100% Compatível</span>
+                </div>
+                <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-principal); line-height: 1.45;">
+                  1. Mover <strong>COMP203 (Programação 3 - 42 alunos)</strong> do <em>Lab 02 (Ter/Qui M3-M4)</em> para o <strong>Lab 01 (45 lugares) na Segunda e Quarta (M3-M4)</strong>.<br>
+                  2. Manter <strong>COMP402 (Eng. Software - 35 alunos)</strong> na <strong>Sala 102 na Terça e Quinta (M3-M4)</strong>.
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; padding-top: 6px; border-top: 1px solid #bbf7d0;">
+                  <span style="font-size: var(--tamanho-texto-micro); color: #15803d;">
+                    ✔ Resolve o choque do Prof. Ranilson • ✔ Atende aos 42 alunos com PCs individuais • ✔ Sem choque no 3º Período
+                  </span>
+                  <button class="botao-acao botao-sucesso" onclick="alert('Solução A aplicada com sucesso! Conflito resolvido sem gerar efeito dominó.')">
+                    Aplicar Solução A
+                  </button>
+                </div>
+              </div>
+
+              <!-- Proposta B (Alternativa) -->
+              <div class="cartao-proposta-solucao">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 700; color: var(--cor-texto-principal); font-size: var(--tamanho-texto-destaque);">
+                    🔀 Solução Alternativa B (Deslocamento para Turno Vespertino)
+                  </span>
+                  <span class="emblema-status emblema-neutro">Impacto Dominó: Zero</span>
+                </div>
+                <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); line-height: 1.45;">
+                  1. Manter <strong>COMP203</strong> na Terça e Quinta (M3-M4), trocando apenas a sala para o <strong>Lab 01 (45 lugares)</strong>.<br>
+                  2. Deslocar <strong>COMP402 (Eng. Software)</strong> para <strong>Terça e Quinta (T1-T2: 13:30 - 15:10)</strong> na <strong>Sala 102</strong> (janela preferencial do docente livre).
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+                  <button class="botao-acao">Aplicar Solução B</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BLOCO INFERIOR: EXPORTAÇÃO E QUADROS OFICIAIS DE HORÁRIOS -->
+        <div class="cartao-superficie">
+          <div class="cabecalho-bloco">
+            <span class="titulo-bloco">📄 Exportação de Relatórios e Quadros Oficiais (Secretaria & Coordenação)</span>
+            <span class="emblema-status emblema-neutro">Formatos: PDF, Planilha e Mural</span>
+          </div>
+          <div class="corpo-bloco">
+            <div class="grade-relatorios-exportacao">
+              
+              <div class="cartao-relatorio">
+                <div>
+                  <div style="font-weight: 700; font-size: var(--tamanho-texto-destaque);">📋 Grade Oficial por Curso e Período</div>
+                  <p style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-secundario); margin-top: 4px;">
+                    Relatório consolidado para cadastro no SIGAA e divulgação aos alunos de Ciência e Engenharia da Computação.
+                  </p>
+                </div>
+                <button class="botao-acao" style="width: 100%;">Gerar Quadro por Curso (PDF)</button>
+              </div>
+
+              <div class="cartao-relatorio">
+                <div>
+                  <div style="font-weight: 700; font-size: var(--tamanho-texto-destaque);">🚪 Espelho de Porta de Sala / Lab</div>
+                  <p style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-secundario); margin-top: 4px;">
+                    Quadros individuais de horário para fixação na porta de cada laboratório e sala de aula do bloco IC.
+                  </p>
+                </div>
+                <button class="botao-acao" style="width: 100%;">Imprimir Folhas de Salas</button>
+              </div>
+
+              <div class="cartao-relatorio">
+                <div>
+                  <div style="font-weight: 700; font-size: var(--tamanho-texto-destaque);">👨‍🏫 Agenda Individual por Docente</div>
+                  <p style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-secundario); margin-top: 4px;">
+                    Comprovante de alocação de horários e salas para envio individual aos professores do instituto.
+                  </p>
+                </div>
+                <button class="botao-acao" style="width: 100%;">Exportar Agendas Docentes</button>
+              </div>
+
+              <div class="cartao-relatorio">
+                <div>
+                  <div style="font-weight: 700; font-size: var(--tamanho-texto-destaque);">📊 Relatório de Uso de Infraestrutura</div>
+                  <p style="font-size: var(--tamanho-texto-micro); color: var(--cor-texto-secundario); margin-top: 4px;">
+                    Indicadores de eficiência, taxa de ocupação de laboratórios e janelas livres para monitoria e eventos.
+                  </p>
+                </div>
+                <button class="botao-acao" style="width: 100%;">Baixar Planilha de Ocupação</button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <footer class="barra-status">
+        <div class="barra-status-esquerda">
+          <span>Central de Resolução de Conflitos e Publicação • SATIC</span>
+        </div>
+        <div class="barra-status-direita">
+          <span>Algoritmo de prevenção de efeito dominó habilitado</span>
+        </div>
+      </footer>
+    </section>
+
+  </div>
+
+  <!-- SCRIPT PARA NAVEGAÇÃO ENTRE AS 6 TELAS E INTERATIVIDADE DOS PROTÓTIPOS -->
+  <script>
+    // Alternância entre as 6 telas principais
+    function navegarParaTela(idTela, idAbaMenu) {
+      document.querySelectorAll('.tela-conteudo').forEach(tela => {
+        tela.classList.remove('ativa');
+      });
+      document.querySelectorAll('.item-menu').forEach(item => {
+        item.classList.remove('ativo');
+      });
+
+      const telaDestino = document.getElementById(idTela);
+      if (telaDestino) {
+        telaDestino.classList.add('ativa');
+      }
+
+      const abaAtiva = document.getElementById(idAbaMenu);
+      if (abaAtiva) {
+        abaAtiva.classList.add('ativo');
+      }
+    }
+
+    // Recolher ou expandir o Inspetor Inferior na Tela 2 (Matriz)
+    function alternarGavetaInspecao() {
+      const gaveta = document.getElementById('gaveta-detalhes');
+      if (gaveta) {
+        gaveta.style.display = (gaveta.style.display === 'none') ? 'flex' : 'none';
+      }
+    }
+
+    // Atualizar o Inspetor Inferior ao clicar em uma célula da Matriz de Horários
+    function selecionarAlocacao(tipo) {
+      const gaveta = document.getElementById('gaveta-detalhes');
+      const conteudo = document.getElementById('conteudo-inspecao');
+      const rotulo = document.getElementById('rotulo-status-conflito');
+
+      if (!gaveta || !conteudo || !rotulo) return;
+      gaveta.style.display = 'flex';
+
+      if (tipo === 'choque-ranilson') {
+        rotulo.className = 'emblema-status emblema-critico';
+        rotulo.textContent = 'CHOQUE CRÍTICO DETECTADO';
+        conteudo.innerHTML = `
+          <div class="cartao-superficie" style="padding: var(--espacamento-sm);">
+            <div style="font-weight: 700; color: var(--cor-texto-principal); font-size: var(--tamanho-texto-padrao);">
+              Alocação Selecionada: COMP203 - Programação 3 (Turma A)
+            </div>
+            <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 4px;">
+              • <strong>Docente:</strong> Prof. Ranilson (SIAPE: 2024389)<br>
+              • <strong>Horário:</strong> Terça e Quinta (M3-M4: 09:20 às 11:00)<br>
+              • <strong>Espaço Alocado:</strong> Lab 02 (Capacidade: 30 postos) | <strong>Matriculados:</strong> 42 alunos
+            </div>
+            <div class="agrupamento-botoes" style="margin-top: 10px;">
+              <button class="botao-acao botao-primario" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+                ⚡ Abrir Simulador Anti-Efeito Dominó
+              </button>
+              <button class="botao-acao" onclick="navegarParaTela('tela-turmas', 'aba-turmas')">
+                ✏️ Editar Turma
+              </button>
+            </div>
+          </div>
+          <div class="bloco-diagnostico-regras">
+            <span style="font-weight: 700; font-size: var(--tamanho-texto-pequeno); color: var(--cor-alerta-critico-texto);">
+              Violações de Regras Identificadas pelo SATIC:
+            </span>
+            <div class="item-regra-violada item-regra-violada-critica">
+              <span>⛔</span>
+              <div>
+                <strong>[Regra Hard R1 - Choque de Horário Docente]:</strong> O <em>Prof. Ranilson</em> está alocado no mesmo horário (Terça/Quinta M3-M4) na turma <strong>COMP402 (Sala 102)</strong>.
+              </div>
+            </div>
+            <div class="item-regra-violada item-regra-violada-infra">
+              <span>⚠️</span>
+              <div>
+                <strong>[Regra Hard R2 - Superlotação de Laboratório]:</strong> 42 alunos matriculados para apenas 30 computadores disponíveis no <strong>Lab 02</strong>.
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (tipo === 'infra-so') {
+        rotulo.className = 'emblema-status emblema-infra';
+        rotulo.textContent = 'VIOLAÇÃO DE INFRAESTRUTURA E CAPACIDADE';
+        conteudo.innerHTML = `
+          <div class="cartao-superficie" style="padding: var(--espacamento-sm);">
+            <div style="font-weight: 700; color: var(--cor-texto-principal); font-size: var(--tamanho-texto-padrao);">
+              Alocação Selecionada: COMP308 - Sistemas Operacionais (Prática)
+            </div>
+            <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 4px;">
+              • <strong>Docente:</strong> Prof. Patrick<br>
+              • <strong>Horário:</strong> Quarta e Sexta (T1-T2: 13:30 às 15:10)<br>
+              • <strong>Espaço Alocado:</strong> Sala 103 (Sala Teórica - 30 lugares) | <strong>Matriculados:</strong> 45 alunos
+            </div>
+            <div class="agrupamento-botoes" style="margin-top: 10px;">
+              <button class="botao-acao botao-primario" onclick="navegarParaTela('tela-conflitos', 'aba-conflitos')">
+                🔄 Migrar para Laboratório Compatível
+              </button>
+            </div>
+          </div>
+          <div class="bloco-diagnostico-regras">
+            <span style="font-weight: 700; font-size: var(--tamanho-texto-pequeno); color: var(--cor-alerta-infra-texto);">
+              Violações Detectadas:
+            </span>
+            <div class="item-regra-violada item-regra-violada-infra">
+              <span>⚠️</span>
+              <div>
+                <strong>[Déficit de Capacidade]:</strong> Sala 103 comporta 30 alunos; a turma possui 45 matriculados (+15 alunos excedentes).
+              </div>
+            </div>
+            <div class="item-regra-violada item-regra-violada-infra">
+              <span>💻</span>
+              <div>
+                <strong>[Incompatibilidade de Ambiente]:</strong> A disciplina exige laboratório de informática com PCs, mas a Sala 103 é puramente teórica.
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        rotulo.className = 'emblema-status emblema-sucesso';
+        rotulo.textContent = 'ALOCAÇÃO VÁLIDA (SEM RESTRIÇÕES VIOLADAS)';
+        conteudo.innerHTML = `
+          <div class="cartao-superficie" style="padding: var(--espacamento-sm);">
+            <div style="font-weight: 700; color: var(--cor-texto-principal); font-size: var(--tamanho-texto-padrao);">
+              Alocação Selecionada: COMP204 - Banco de Dados (Turma A)
+            </div>
+            <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); margin-top: 4px;">
+              • <strong>Docente:</strong> Prof. Baldoino<br>
+              • <strong>Horário:</strong> Segunda e Quarta (M1-M2: 07:30 às 09:10)<br>
+              • <strong>Espaço Alocado:</strong> Sala 101 (Capacidade: 45 lugares) | <strong>Matriculados:</strong> 38 alunos
+            </div>
+          </div>
+          <div class="bloco-diagnostico-regras">
+            <div class="item-regra-violada" style="background-color: var(--cor-alerta-sucesso-fundo); color: var(--cor-alerta-sucesso-texto); border: 1px solid var(--cor-alerta-sucesso-borda);">
+              <span>✅</span>
+              <div>
+                <strong>Alocação Regular:</strong> Docente disponível no horário, sem superposição no período curricular e sala com folga de 7 lugares.
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Seleção de linha nas tabelas mestre
+    function selecionarLinhaTabela(linha, idTabela) {
+      const tabela = document.getElementById(idTabela);
+      if (tabela) {
+        tabela.querySelectorAll('tr').forEach(tr => tr.classList.remove('linha-selecionada'));
+      }
+      linha.classList.add('linha-selecionada');
+    }
+
+    // Alternar estados de disponibilidade na matriz do professor (Tela 5)
+    function alternarCelulaDisp(celula) {
+      if (celula.classList.contains('disp-preferencial')) {
+        celula.classList.remove('disp-preferencial');
+        celula.classList.add('disp-disponivel');
+        celula.textContent = 'Disponível';
+      } else if (celula.classList.contains('disp-disponivel')) {
+        celula.classList.remove('disp-disponivel');
+        celula.classList.add('disp-indisponivel');
+        celula.textContent = 'Indisponível';
+      } else if (celula.classList.contains('disp-indisponivel')) {
+        celula.classList.remove('disp-indisponivel');
+        celula.classList.add('disp-preferencial');
+        celula.textContent = '★ Preferencial (Livre)';
+      }
+    }
+
+    // Alternar conflito em análise na Central de Conflitos (Tela 6)
+    function selecionarConflitoCentral(idConflito, elementoCard) {
+      document.querySelectorAll('.item-conflito-selecionavel').forEach(item => {
+        item.classList.remove('selecionado');
+      });
+      elementoCard.classList.add('selecionado');
+
+      const corpoSimulador = document.getElementById('corpo-simulador-conflito');
+      if (!corpoSimulador) return;
+
+      if (idConflito === 'conflito-1') {
+        corpoSimulador.innerHTML = `
+          <div style="margin-bottom: var(--espacamento-md); padding: var(--espacamento-sm) var(--espacamento-md); background-color: #f8fafc; border: 1px solid var(--cor-borda-suave); border-radius: var(--raio-borda-padrao);">
+            <div style="font-weight: 700; font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario);">CONFLITO EM ANÁLISE:</div>
+            <div style="font-size: var(--tamanho-texto-destaque); font-weight: 700; margin-top: 2px;">
+              Choque Simultâneo: Prof. Ranilson (COMP203 vs COMP402) + Lotação Lab 02
+            </div>
+          </div>
+          <div class="cartao-proposta-solucao recomendada">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: #166534; font-size: var(--tamanho-texto-destaque);">
+                ✅ Solução Recomendada A (Impacto Dominó: ZERO novos conflitos)
+              </span>
+              <span class="emblema-status emblema-sucesso">100% Compatível</span>
+            </div>
+            <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-principal); line-height: 1.45;">
+              1. Mover <strong>COMP203 (Programação 3 - 42 alunos)</strong> do <em>Lab 02 (Ter/Qui M3-M4)</em> para o <strong>Lab 01 (45 lugares) na Segunda e Quarta (M3-M4)</strong>.<br>
+              2. Manter <strong>COMP402 (Eng. Software - 35 alunos)</strong> na <strong>Sala 102 na Terça e Quinta (M3-M4)</strong>.
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; padding-top: 6px; border-top: 1px solid #bbf7d0;">
+              <span style="font-size: var(--tamanho-texto-micro); color: #15803d;">
+                ✔ Resolve o choque do Prof. Ranilson • ✔ Atende aos 42 alunos com PCs individuais
+              </span>
+              <button class="botao-acao botao-sucesso" onclick="alert('Solução A aplicada com sucesso!')">Aplicar Solução A</button>
+            </div>
+          </div>
+          <div class="cartao-proposta-solucao">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: var(--cor-texto-principal); font-size: var(--tamanho-texto-destaque);">
+                🔀 Solução Alternativa B (Deslocamento para Turno Vespertino)
+              </span>
+              <span class="emblema-status emblema-neutro">Impacto Dominó: Zero</span>
+            </div>
+            <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario); line-height: 1.45;">
+              1. Manter <strong>COMP203</strong> na Terça e Quinta (M3-M4), trocando apenas a sala para o <strong>Lab 01 (45 lugares)</strong>.<br>
+              2. Deslocar <strong>COMP402 (Eng. Software)</strong> para <strong>Terça e Quinta (T1-T2)</strong> na <strong>Sala 102</strong>.
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+              <button class="botao-acao">Aplicar Solução B</button>
+            </div>
+          </div>
+        `;
+      } else if (idConflito === 'conflito-2') {
+        corpoSimulador.innerHTML = `
+          <div style="margin-bottom: var(--espacamento-md); padding: var(--espacamento-sm) var(--espacamento-md); background-color: #f8fafc; border: 1px solid var(--cor-borda-suave); border-radius: var(--raio-borda-padrao);">
+            <div style="font-weight: 700; font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario);">CONFLITO EM ANÁLISE:</div>
+            <div style="font-size: var(--tamanho-texto-destaque); font-weight: 700; margin-top: 2px;">
+              COMP308 (Sistemas Operacionais - 45 alunos) na Sala 103 (30 lugares, sem PCs)
+            </div>
+          </div>
+          <div class="cartao-proposta-solucao recomendada">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: #166534; font-size: var(--tamanho-texto-destaque);">
+                ✅ Solução Recomendada (Alocação Direta no Lab 01)
+              </span>
+              <span class="emblema-status emblema-sucesso">Impacto Dominó: Zero</span>
+            </div>
+            <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-principal); line-height: 1.45;">
+              Transferir <strong>COMP308 (45 alunos)</strong> da <em>Sala 103</em> para o <strong>Lab 01 (Capacidade: 45 PCs)</strong> mantendo o mesmo horário de <strong>Quarta e Sexta (T1-T2: 13:30 - 15:10)</strong>, que se encontra livre.
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; padding-top: 6px; border-top: 1px solid #bbf7d0;">
+              <span style="font-size: var(--tamanho-texto-micro); color: #15803d;">
+                ✔ Cumpre exigência de laboratório • ✔ Comporta 100% dos 45 matriculados sem alterar horário
+              </span>
+              <button class="botao-acao botao-sucesso" onclick="alert('Transferência para o Lab 01 realizada com sucesso!')">Aplicar Transferência</button>
+            </div>
+          </div>
+        `;
+      } else {
+        corpoSimulador.innerHTML = `
+          <div style="margin-bottom: var(--espacamento-md); padding: var(--espacamento-sm) var(--espacamento-md); background-color: #f8fafc; border: 1px solid var(--cor-borda-suave); border-radius: var(--raio-borda-padrao);">
+            <div style="font-weight: 700; font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-secundario);">PENDÊNCIA EM ANÁLISE:</div>
+            <div style="font-size: var(--tamanho-texto-destaque); font-weight: 700; margin-top: 2px;">
+              Alocação em Lote das 3 Turmas da Fila (COMP201, COMP304 e COMP101)
+            </div>
+          </div>
+          <div class="cartao-proposta-solucao recomendada">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: #166534; font-size: var(--tamanho-texto-destaque);">
+                ✅ Sugestão de Encaixe Ótimo para as 3 Turmas Pendentes
+              </span>
+              <span class="emblema-status emblema-sucesso">Zero Colisões</span>
+            </div>
+            <div style="font-size: var(--tamanho-texto-pequeno); color: var(--cor-texto-principal); line-height: 1.45;">
+              • <strong>COMP201 (45 al.):</strong> Alocar no <em>Lab 01</em> em <strong>Terça e Quinta (T1-T2)</strong>.<br>
+              • <strong>COMP304 (35 al.):</strong> Alocar no <em>Lab 01</em> em <strong>Segunda e Quarta (T3-T4)</strong>.<br>
+              • <strong>COMP101 (60 al.):</strong> Alocar no <em>Anfiteatro IC (70 lug.)</em> em <strong>Terça e Quinta (M1-M2)</strong>.
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+              <button class="botao-acao botao-sucesso" onclick="alert('As 3 turmas pendentes foram alocadas sem conflitos!')">Alocar Todas as 3 Turmas</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
