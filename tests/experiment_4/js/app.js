@@ -2743,9 +2743,10 @@
         }
     }
 
-    async function recarregarDoServidor() {
+    /** @param {boolean} perguntar pede confirmação se houver rascunho (o botão "Descartar" já é a confirmação) */
+    async function recarregarDoServidor(perguntar = true) {
         document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
-        if (contarRascunho(appState.dados) > 0 && !window.confirm("Descartar as alterações não salvas e recarregar do servidor?")) return;
+        if (perguntar && contarRascunho(appState.dados) > 0 && !window.confirm("Descartar as alterações não salvas e recarregar do servidor?")) return;
         try {
             appState.dados = await window.SATIC_DATA.descartarRascunho(appState.dados);
             appState.matriz.turmaEmMovimentoId = null;
@@ -2880,7 +2881,7 @@
             const draftBtn = e.target.closest("[data-draft-action]");
             if (draftBtn) {
                 if (draftBtn.getAttribute("data-draft-action") === "confirm") confirmarTudo();
-                else recarregarDoServidor();
+                else recarregarDoServidor(false);
                 return;
             }
             if (e.target.closest("[data-api-retry]")) {
