@@ -10,13 +10,17 @@
 
     const appState = {
         dados: criarDadosIniciais(),
-        telaAtiva: "tela-painel",
+        telaAtiva: "tela-matriz",
 
         matriz: {
+            busca: "",
+            turno: "todos",
             curso: "todos",
             periodo: "todos",
             espaco: "todos",
             professor: "todos",
+            filtrosAbertos: false,
+            painelPendentesRecolhido: false,
             turmaSelecionadaId: null,
             modoEdicaoDrawer: false,
             turmaEmMovimentoId: null
@@ -43,6 +47,7 @@
             professor: "todos",
             status: "todos",
             ambiente: "todos",
+            filtrosAbertos: false,
             turmaSelecionadaId: null,
             modoEdicao: false
         },
@@ -114,8 +119,18 @@
     function navegarPara(idTela, opcoes = {}) {
         if (!document.getElementById(idTela)?.classList.contains("view-screen")) return;
         if (idTela !== appState.telaAtiva) appState.matriz.turmaEmMovimentoId = null;
+        appState.matriz.filtrosAbertos = false;
+        appState.turmas.filtrosAbertos = false;
+        document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
         if (opcoes.selecionarTurmaMatriz || opcoes.iniciarAlocacaoTurma) {
-            Object.assign(appState.matriz, { curso: "todos", periodo: "todos", espaco: "todos", professor: "todos" });
+            Object.assign(appState.matriz, {
+                busca: "",
+                turno: "todos",
+                curso: "todos",
+                periodo: "todos",
+                espaco: "todos",
+                professor: "todos"
+            });
         }
         appState.telaAtiva = idTela;
 
@@ -139,6 +154,7 @@
         }
 
         if (opcoes.iniciarAlocacaoTurma) {
+            appState.matriz.painelPendentesRecolhido = false;
             appState.matriz.turmaSelecionadaId = opcoes.iniciarAlocacaoTurma;
             appState.matriz.turmaEmMovimentoId = opcoes.iniciarAlocacaoTurma;
             appState.matriz.modoEdicaoDrawer = false;
@@ -156,20 +172,16 @@
         }
     }
 
-    function atualizarBadgesSidebar() {
-        document.querySelectorAll('.sidebar [data-nav-target]').forEach((btn) => {
+    function atualizarBadgesNavegacao() {
+        document.querySelectorAll('.app-topnav [data-nav-target]').forEach((btn) => {
             if (btn.classList.contains('active')) btn.setAttribute('aria-current', 'page');
             else btn.removeAttribute('aria-current');
         });
-        const badgeTurmas = document.querySelector('.sidebar [data-nav-target="tela-turmas"] .nav-count');
-        const badgeEspacos = document.querySelector('.sidebar [data-nav-target="tela-espacos"] .nav-count');
-        if (badgeTurmas) badgeTurmas.textContent = appState.dados.turmas.length;
-        if (badgeEspacos) badgeEspacos.textContent = appState.dados.espacos.length;
         const conflitos = obterConflitosConsolidados(appState.dados);
-        const badgeConflitos = document.getElementById("sidebar-conflict-count");
+        const badgeConflitos = document.getElementById("nav-conflict-count");
         if (badgeConflitos) {
             badgeConflitos.textContent = conflitos.length;
-            badgeConflitos.classList.toggle("is-critical", conflitos.length > 0);
+            badgeConflitos.hidden = conflitos.length === 0;
         }
     }
 
@@ -187,22 +199,25 @@
         const percentual = Math.round((alocadas.length / todasTurmas.length) * 100);
 
         const itensPrioritarios = [
-            ...conflitos.map((c) => ({
-                codigo: c.codigo,
-                disciplina: c.disciplina,
-                detalhe: `${c.problemas[0].categoria} · ${escapar(c.resumoPrincipal)}`,
-                statusRotulo: c.problemas[0].tipo === "docente" ? "conflito docente" : c.problemas[0].tipo === "capacidade" ? "capacidade insuf." : "conflito de espaço",
-                corDot: "dot-danger",
-                acaoTexto: "Resolver",
-                acaoTipo: "resolver-conflito",
-                alvoId: c.id
-            })),
+            ...conflitos.map((c) => {
+                const turma = todasTurmas.find((t) => t.id === c.turmaId);
+                const diag = turma ? inspecionarTurma(appState.dados, turma) : { problemas: c.problemas };
+                const info = turma ? obterRotuloConflito(turma, diag) : { curtoHtml: escapar(c.problemas[0].categoria), resumoTooltip: c.resumoPrincipal };
+                return {
+                    codigo: c.codigo,
+                    disciplina: c.disciplina,
+                    detalhe: `${rotuloRegraProblema(c.problemas[0].categoria)} · ${escapar(c.problemas[0].detalhe)}`,
+                    badgeHtml: `<span class="event-conflict-badge" title="${escapar(info.resumoTooltip)}">${info.curtoHtml}</span>`,
+                    acaoTexto: "Resolver",
+                    acaoTipo: "resolver-conflito",
+                    alvoId: c.id
+                };
+            }),
             ...pendentes.map((p) => ({
                 codigo: p.codigo,
                 disciplina: p.disciplina,
-                detalhe: `${p.professor} · ${p.alunos} alunos`,
-                statusRotulo: "sem sala",
-                corDot: "dot-warning",
+                detalhe: `${escapar(p.professor)} · ${p.alunos} alunos`,
+                badgeHtml: `<span class="status-pill is-pending">Sem sala</span>`,
                 acaoTexto: "Alocar",
                 acaoTipo: "alocar-matriz",
                 alvoId: p.id
@@ -245,7 +260,7 @@
                     <div class="overview-courses-sub">Ciência da Computação · Engenharia da Computação</div>
                 </div>
                 <div class="overview-completion">
-                    <div class="overview-completion-label">${percentual}% alocado</div>
+                    <div class="overview-completion-label"><span class="mono-num">${percentual}%</span> alocado</div>
                     <div class="thin-progress" aria-hidden="true">
                         <div class="thin-progress-bar" data-bar-width="${percentual}"></div>
                     </div>
@@ -270,26 +285,21 @@
             <section class="overview-section" aria-labelledby="sec-pendencias-heading">
                 <div class="section-header-row">
                     <h2 class="section-heading" id="sec-pendencias-heading">Pendências prioritárias</h2>
-                    <button type="button" class="section-link" data-overview-jump="tela-conflitos">
-                        Ver todas ${ICONS.arrowRight}
-                    </button>
+                    <button type="button" class="section-link" data-overview-jump="tela-conflitos">Ver todas</button>
                 </div>
 
                 ${
                     itensPrioritarios.length === 0
-                        ? `<div class="empty-state-note">Todas as 18 turmas estão alocadas sem conflitos pendentes. Proposta pronta para publicação.</div>`
+                        ? `<div class="empty-state-note">Todas as <span class="mono-num">${todasTurmas.length}</span> turmas estão alocadas sem conflitos pendentes. Proposta pronta para publicação.</div>`
                         : `<div class="compact-list">
                             ${itensPrioritarios
                                 .map(
                                     (item) => `
                                 <div class="compact-list-row">
                                     <span class="cell-mono">${item.codigo}</span>
-                                    <span class="cell-primary">${item.disciplina}</span>
+                                    <span class="cell-primary">${escapar(item.disciplina)}</span>
                                     <span class="cell-muted">${item.detalhe}</span>
-                                    <span class="status-inline">
-                                        <span class="dot ${item.corDot}"></span>
-                                        ${item.statusRotulo}
-                                    </span>
+                                    <div>${item.badgeHtml}</div>
                                     <button type="button" class="row-action-btn" data-priority-action="${item.acaoTipo}" data-priority-id="${item.alvoId}">
                                         ${item.acaoTexto}
                                     </button>
@@ -304,9 +314,7 @@
                 <section aria-labelledby="sec-ocupacao-heading">
                     <div class="section-header-row">
                         <h2 class="section-heading" id="sec-ocupacao-heading">Ocupação dos espaços</h2>
-                        <button type="button" class="section-link" data-overview-jump="tela-espacos">
-                            Espaços ${ICONS.arrowRight}
-                        </button>
+                        <button type="button" class="section-link" data-overview-jump="tela-espacos">Espaços</button>
                     </div>
                     <div>
                         ${linhasOcupacao
@@ -315,7 +323,7 @@
                             <div class="compact-metric-row">
                                 <div>
                                     <span class="cell-primary">${escapar(esp.nome)}</span>
-                                    <span class="cell-muted"> · ${esp.capacidade} lug.</span>
+                                    <span class="cell-muted"> · <span class="mono-num">${esp.capacidade}</span> lug.</span>
                                 </div>
                                 <div class="mini-bar-track" aria-hidden="true">
                                     <div class="mini-bar-fill ${esp.taxa >= 85 ? "is-critical" : esp.taxa >= 70 ? "is-high" : ""}" data-bar-width="${esp.taxa}"></div>
@@ -330,18 +338,16 @@
                 <section aria-labelledby="sec-periodos-heading">
                     <div class="section-header-row">
                         <h2 class="section-heading" id="sec-periodos-heading">Progresso por período</h2>
-                        <button type="button" class="section-link" data-overview-jump="tela-matriz">
-                            Abrir grade ${ICONS.arrowRight}
-                        </button>
+                        <button type="button" class="section-link" data-overview-jump="tela-matriz">Abrir grade</button>
                     </div>
                     <div>
                         ${linhasPeriodo
                             .map((p) => {
-                                let statusHtml = `<span class="status-inline"><span class="dot dot-success"></span>Concluído</span>`;
+                                let statusHtml = `<span class="status-pill is-valid">Concluído</span>`;
                                 if (p.temConflito) {
-                                    statusHtml = `<span class="status-inline"><span class="dot dot-danger"></span>Conflito</span>`;
+                                    statusHtml = `<span class="status-pill is-conflict">Conflito</span>`;
                                 } else if (p.alocadas < p.total) {
-                                    statusHtml = `<span class="status-inline"><span class="dot dot-warning"></span>${p.total - p.alocadas} pendente</span>`;
+                                    statusHtml = `<span class="status-pill is-pending"><span class="mono-num">${p.total - p.alocadas}</span> pendente</span>`;
                                 }
                                 return `
                                 <div class="compact-metric-row">
@@ -360,53 +366,262 @@
     }
 
     /* ==========================================================================
-       2. MATRIZ DE ALOCAÇÃO (#tela-matriz)
+       2. GRADE HORÁRIA (#tela-matriz)
        ========================================================================== */
+    function nomeCompletoProfessor(profId) {
+        return appState.dados.professores.find((p) => p.id === profId)?.nome || profId || "";
+    }
+
+    function contarFiltrosMatrizAtivos() {
+        const { curso, periodo, espaco, professor } = appState.matriz;
+        return [curso, periodo, espaco, professor].filter((v) => v !== "todos").length;
+    }
+
+    function obterRotuloConflito(turma, diag) {
+        const prioridades = {
+            Professor: 1,
+            Disponibilidade: 2,
+            Ambiente: 3,
+            Capacidade: 4,
+            Sala: 5,
+            Espaço: 6,
+            Encontros: 7
+        };
+        const itens = diag.problemas.map((p) => {
+            if (p.categoria === "Professor") {
+                return { prio: prioridades.Professor, rn: "RN-01", curtoHtml: "Choque docente", texto: "Choque docente" };
+            }
+            if (p.categoria === "Disponibilidade") {
+                return { prio: prioridades.Disponibilidade, rn: "RN-02", curtoHtml: "Indisponível", texto: "Indisponível" };
+            }
+            if (p.categoria === "Ambiente") {
+                const rot = turma.ambienteExigido === "Laboratório" ? "Exige lab" : "Exige auditório";
+                return { prio: prioridades.Ambiente, rn: "RN-04", curtoHtml: rot, texto: rot };
+            }
+            if (p.categoria === "Capacidade") {
+                const esp = appState.dados.espacos.find((e) => e.id === turma.sala);
+                const cap = esp ? esp.capacidade : 0;
+                return {
+                    prio: prioridades.Capacidade,
+                    rn: "RN-03",
+                    curtoHtml: `Lotação <span class="mono-num">${turma.alunos}/${cap}</span>`,
+                    texto: `Lotação ${turma.alunos}/${cap}`
+                };
+            }
+            if (p.categoria === "Sala") {
+                return { prio: prioridades.Sala, rn: "Sala", curtoHtml: "Choque sala", texto: "Choque sala" };
+            }
+            if (p.categoria === "Espaço") {
+                return { prio: prioridades.Espaço, rn: "Espaço", curtoHtml: "Sala indisponível", texto: "Sala indisponível" };
+            }
+            return { prio: prioridades.Encontros, rn: "Encontros", curtoHtml: "Encontros", texto: "Encontros incompletos" };
+        });
+        itens.sort((a, b) => a.prio - b.prio);
+        const principal = itens[0];
+        const extra = itens.length > 1 ? ` <span class="mono-num">+${itens.length - 1}</span>` : "";
+        return {
+            curtoHtml: `${principal.curtoHtml}${extra}`,
+            resumoTooltip: itens.map((i) => `${i.rn}: ${i.texto}`).join(" · ")
+        };
+    }
+
+    function formatarMotivoBloqueio(viabilidade, turma) {
+        const motivo = viabilidade.motivo || "";
+        if (motivo.endsWith(" indisponível")) {
+            return `Indisponível: ${motivo.replace(/ indisponível$/, "")}`;
+        }
+        if (motivo.startsWith("Choque docente (")) {
+            return `Choque: ${motivo.slice("Choque docente (".length, -1)}`;
+        }
+        if (motivo === "Sem sala compatível livre") {
+            if (turma.ambienteExigido === "Laboratório") return "Sem lab livre";
+            if (turma.ambienteExigido === "Auditório") return "Sem auditório livre";
+            return "Sem sala livre";
+        }
+        return motivo;
+    }
+
+    function rotuloRegraProblema(categoria) {
+        const mapa = {
+            Professor: "RN-01 · Choque docente",
+            Disponibilidade: "RN-02 · Indisponibilidade docente",
+            Capacidade: "RN-03 · Capacidade física",
+            Ambiente: "RN-04 · Adequação de ambiente",
+            Sala: "Exclusividade de sala",
+            Espaço: "Espaço indisponível",
+            Encontros: "Encontros semanais"
+        };
+        return mapa[categoria] || categoria;
+    }
+
+    function renderizarChipsFiltrosMatriz() {
+        const chipsEl = document.getElementById("matrix-active-chips");
+        const filtrosBtn = document.getElementById("matrix-filters-btn");
+        const filtrosCount = document.getElementById("matrix-filters-count");
+        const popoverEl = document.getElementById("matrix-filters-popover");
+
+        const { curso, periodo, espaco, professor, filtrosAbertos } = appState.matriz;
+        const ativos = contarFiltrosMatrizAtivos();
+
+        if (filtrosBtn) {
+            filtrosBtn.classList.toggle("has-active", ativos > 0);
+            filtrosBtn.setAttribute("aria-expanded", String(Boolean(filtrosAbertos)));
+        }
+        if (filtrosCount) {
+            filtrosCount.textContent = ativos;
+            filtrosCount.hidden = ativos === 0;
+        }
+        if (popoverEl) {
+            popoverEl.classList.toggle("is-open", Boolean(filtrosAbertos));
+        }
+
+        if (!chipsEl) return;
+        const itens = [];
+        if (curso !== "todos") itens.push({ chave: "curso", rotulo: "Curso", valor: curso });
+        if (periodo !== "todos") itens.push({ chave: "periodo", rotulo: "Período", valor: periodo });
+        if (espaco !== "todos") itens.push({ chave: "espaco", rotulo: "Espaço", valor: nomeEspaco(espaco) });
+        if (professor !== "todos") itens.push({ chave: "professor", rotulo: "Docente", valor: professor });
+
+        if (itens.length === 0) {
+            chipsEl.hidden = true;
+            chipsEl.innerHTML = "";
+            return;
+        }
+
+        chipsEl.hidden = false;
+        chipsEl.innerHTML = `
+            ${itens
+                .map(
+                    (it) => `
+                <button type="button" class="filter-chip" data-remove-filter="${it.chave}" aria-label="Remover filtro ${it.rotulo}">
+                    <span class="filter-chip-label">${it.rotulo}:</span>
+                    <span>${escapar(it.valor)}</span>
+                    <span class="filter-chip-close" aria-hidden="true">×</span>
+                </button>`
+                )
+                .join("")}
+            <button type="button" class="chips-clear-btn" data-clear-matrix-filters="true">Limpar filtros</button>
+        `;
+    }
+
     function renderizarMatriz() {
+        const searchEl = document.getElementById("matrix-search");
+        if (searchEl && searchEl.value !== appState.matriz.busca) {
+            searchEl.value = appState.matriz.busca;
+        }
         document.getElementById("matrix-filter-curso").value = appState.matriz.curso;
         document.getElementById("matrix-filter-periodo").value = appState.matriz.periodo;
         atualizarOpcoesFiltro("matrix-filter-espaco", appState.dados.espacos, appState.matriz.espaco);
         atualizarOpcoesFiltro("matrix-filter-professor", appState.dados.professores, appState.matriz.professor);
+
+        document.querySelectorAll(".shift-seg-btn[data-shift]").forEach((btn) => {
+            const ativo = btn.getAttribute("data-shift") === appState.matriz.turno;
+            btn.classList.toggle("is-active", ativo);
+            btn.setAttribute("aria-pressed", String(ativo));
+        });
+
+        renderizarChipsFiltrosMatriz();
+
+        const panelEl = document.getElementById("matrix-unallocated-panel");
+        const expandBtn = document.getElementById("matrix-expand-unallocated");
+        const expandCountEl = document.getElementById("matrix-expand-count");
         const filaContainer = document.getElementById("matrix-unallocated-list");
         const countNaoAlocadas = document.getElementById("matrix-unallocated-count");
         const tbodyGrade = document.getElementById("matrix-schedule-tbody");
-        const guideBar = document.getElementById("matrix-guide-bar");
-        const guideText = document.getElementById("matrix-guide-text");
+        const scheduleGridEl = document.getElementById("matrix-schedule-grid");
+        const summaryEl = document.getElementById("matrix-summary-count");
+        const movingInlineEl = document.getElementById("matrix-moving-inline");
+        const movingTextEl = document.getElementById("matrix-moving-text");
 
         if (!filaContainer || !tbodyGrade) return;
 
+        const termoBusca = appState.matriz.busca.trim().toLowerCase();
+        const passaBusca = (t) => {
+            if (!termoBusca) return true;
+            const campos = [
+                t.codigo,
+                t.disciplina,
+                t.professor,
+                nomeCompletoProfessor(t.professor),
+                t.sala || "",
+                t.sala ? nomeEspaco(t.sala) : "",
+                t.curso,
+                t.periodo
+            ];
+            return campos.some((c) => String(c).toLowerCase().includes(termoBusca));
+        };
+
         const passaFiltrosMatriz = (t) =>
+            passaBusca(t) &&
             (appState.matriz.curso === "todos" || t.curso === appState.matriz.curso) &&
             (appState.matriz.periodo === "todos" || t.periodo === appState.matriz.periodo) &&
             (appState.matriz.espaco === "todos" || t.sala === appState.matriz.espaco) &&
             (appState.matriz.professor === "todos" || t.professor === appState.matriz.professor);
-        const naoAlocadas = appState.dados.turmas.filter((t) => (!t.sala || !t.slot) &&
-            (appState.matriz.curso === "todos" || t.curso === appState.matriz.curso) &&
-            (appState.matriz.periodo === "todos" || t.periodo === appState.matriz.periodo) &&
-            (appState.matriz.professor === "todos" || t.professor === appState.matriz.professor));
+
+        const todasNaoAlocadas = appState.dados.turmas.filter((t) => !t.sala || !t.slot);
+        const naoAlocadas = todasNaoAlocadas.filter(
+            (t) =>
+                passaBusca(t) &&
+                (appState.matriz.curso === "todos" || t.curso === appState.matriz.curso) &&
+                (appState.matriz.periodo === "todos" || t.periodo === appState.matriz.periodo) &&
+                (appState.matriz.professor === "todos" || t.professor === appState.matriz.professor)
+        );
+
+        const semPendencias = todasNaoAlocadas.length === 0;
+        const painelOculto = semPendencias || appState.matriz.painelPendentesRecolhido;
+
+        if (panelEl) panelEl.hidden = painelOculto;
+        if (expandBtn) expandBtn.hidden = semPendencias || !appState.matriz.painelPendentesRecolhido;
+        if (expandCountEl) expandCountEl.textContent = todasNaoAlocadas.length;
         if (countNaoAlocadas) countNaoAlocadas.textContent = naoAlocadas.length;
 
         if (naoAlocadas.length === 0) {
-            filaContainer.innerHTML = `<div class="empty-pane-note">Nenhuma turma pendente na fila.</div>`;
+            filaContainer.innerHTML = `<div class="empty-pane-note">Nenhuma pendência neste filtro.</div>`;
         } else {
             filaContainer.innerHTML = naoAlocadas
                 .map((t) => {
-                    const isSelected = appState.matriz.turmaSelecionadaId === t.id || appState.matriz.turmaEmMovimentoId === t.id;
-                    const reqTexto = t.ambienteExigido === "Laboratório" ? " · exige laboratório" : t.ambienteExigido === "Auditório" ? " · auditório" : "";
+                    const isMovingThis = appState.matriz.turmaEmMovimentoId === t.id;
+                    const isSelected = isMovingThis || appState.matriz.turmaSelecionadaId === t.id;
+                    const reqTexto =
+                        t.ambienteExigido === "Laboratório"
+                            ? " · exige lab"
+                            : t.ambienteExigido === "Auditório"
+                            ? " · auditório"
+                            : "";
+                    const tagAmbiente =
+                        t.ambienteExigido === "Laboratório"
+                            ? `<span class="unallocated-tag">LAB</span>`
+                            : t.ambienteExigido === "Auditório"
+                            ? `<span class="unallocated-tag">AUD</span>`
+                            : "";
+
                     return `
-                    <button
-                        type="button"
+                    <div
+                        role="button"
+                        tabindex="0"
                         class="unallocated-item ${isSelected ? "is-selected" : ""}"
                         draggable="true"
                         data-unallocated-id="${t.id}"
+                        aria-pressed="${String(isMovingThis)}"
                     >
                         <div class="unallocated-code">
-                            <span>${t.codigo}</span>
+                            <span class="unallocated-code-left">
+                                <span>${t.codigo}</span>
+                                ${tagAmbiente}
+                            </span>
                             <span>${t.periodo.replace(" Período", "")}</span>
                         </div>
                         <div class="unallocated-name">${escapar(t.disciplina)}</div>
-                        <div class="unallocated-meta">${t.alunos} alunos${reqTexto}</div>
-                    </button>`;
+                        <div class="unallocated-meta"><span class="mono-num">${t.alunos}</span> alunos${reqTexto} · ${escapar(t.professor)}</div>
+                        ${
+                            isMovingThis
+                                ? `<div class="unallocated-selected-bar">
+                                    <span>Selecione um horário livre</span>
+                                    <button type="button" class="unallocated-cancel-btn" data-cancel-move="true">Cancelar</button>
+                                </div>`
+                                : ""
+                        }
+                    </div>`;
                 })
                 .join("");
         }
@@ -415,18 +630,40 @@
             ? appState.dados.turmas.find((t) => t.id === appState.matriz.turmaEmMovimentoId)
             : null;
 
-        if (guideBar && guideText) {
-            if (turmaMovimento) {
-                guideBar.classList.add("is-active");
-                guideText.textContent = `${turmaMovimento.codigo} selecionada. Selecione um horário disponível.`;
-            } else {
-                guideBar.classList.remove("is-active");
+        const totalAlocadas = appState.dados.turmas.filter((t) => Boolean(t.sala && t.slot)).length;
+        if (summaryEl) {
+            summaryEl.innerHTML = `<span class="mono-num">${totalAlocadas}/${appState.dados.turmas.length}</span> alocadas`;
+        }
+        const mostrarInlineMoving = Boolean(turmaMovimento && (turmaMovimento.sala || painelOculto));
+        if (movingInlineEl && movingTextEl) {
+            movingInlineEl.hidden = !mostrarInlineMoving;
+            if (summaryEl) summaryEl.hidden = mostrarInlineMoving;
+            if (mostrarInlineMoving) {
+                movingTextEl.innerHTML = `Movendo <span class="mono-num">${turmaMovimento.codigo}</span>`;
             }
         }
 
-        const { curso, periodo, espaco, professor } = appState.matriz;
+        if (scheduleGridEl) {
+            scheduleGridEl.classList.toggle("is-moving-mode", Boolean(turmaMovimento));
+        }
 
-        tbodyGrade.innerHTML = SLOTS_INSTITUCIONAIS.map((slot) => {
+        const slotsVisiveis = SLOTS_INSTITUCIONAIS.filter(
+            (s) => appState.matriz.turno === "todos" || s.turno === appState.matriz.turno
+        );
+
+        if (slotsVisiveis.length === 0) {
+            tbodyGrade.innerHTML = `
+                <tr class="schedule-empty-row">
+                    <td colspan="6" class="schedule-empty-cell">
+                        <div>Nenhum horário cadastrado no turno da noite na oferta <span class="mono-num">${appState.dados.semestre}</span>.</div>
+                        <button type="button" class="btn btn-secondary" data-shift="todos">Ver todos os turnos</button>
+                    </td>
+                </tr>`;
+            renderizarDrawerMatriz();
+            return;
+        }
+
+        tbodyGrade.innerHTML = slotsVisiveis.map((slot) => {
             const celulasDias = DIAS_SEMANA.map((dia) => {
                 const turmasCelula = appState.dados.turmas.filter(
                     (t) => t.sala && t.slot === slot.id && t.dias.includes(dia.id) && passaFiltrosMatriz(t)
@@ -434,33 +671,37 @@
 
                 let classeDrop = "";
                 let hintHtml = "";
+                let tituloCelula = "";
+                let turmasParaExibir = turmasCelula;
+
                 if (turmaMovimento) {
                     const viabilidade = verificarViabilidadeSlot(appState.dados, turmaMovimento, dia.id, slot.id);
                     if (viabilidade.valido) {
                         classeDrop = "is-drop-valid";
-                        hintHtml = `<div class="slot-drop-hint">Alocar · ${viabilidade.salaSugerida}</div>`;
+                        const nomeSala = nomeEspaco(viabilidade.salaSugerida);
+                        hintHtml = `<div class="slot-alloc-action">Alocar em ${escapar(nomeSala)}</div>`;
+                        tituloCelula = `Alocar em ${nomeSala}`;
                     } else {
                         classeDrop = "is-drop-invalid";
-                        hintHtml = `<div class="slot-drop-hint is-blocked">${viabilidade.motivo}</div>`;
+                        const motivoCurto = formatarMotivoBloqueio(viabilidade, turmaMovimento);
+                        hintHtml = `<div class="slot-blocked-reason">${escapar(motivoCurto)}</div>`;
+                        tituloCelula = motivoCurto;
+                        turmasParaExibir = turmasCelula.filter((t) => t.id === turmaMovimento.id);
                     }
                 }
 
-                const blocosHtml = turmasCelula
+                const blocosHtml = turmasParaExibir
                     .map((t) => {
                         const diag = inspecionarTurma(appState.dados, t);
                         const temConflito = diag.problemas.length > 0;
                         const isSelected = appState.matriz.turmaSelecionadaId === t.id;
-
-                        const passaCurso = curso === "todos" || t.curso === curso;
-                        const passaPeriodo = periodo === "todos" || t.periodo === periodo;
-                        const passaEspaco = espaco === "todos" || t.sala === espaco;
-                        const passaProf = professor === "todos" || t.professor === professor;
-                        const passaFiltros = passaCurso && passaPeriodo && passaEspaco && passaProf;
+                        const isMovingCard = Boolean(turmaMovimento && turmaMovimento.id === t.id);
+                        const conflitoInfo = temConflito ? obterRotuloConflito(t, diag) : null;
 
                         return `
                         <button
                             type="button"
-                            class="event-block ${temConflito ? "has-conflict" : ""} ${isSelected ? "is-selected" : ""} ${!passaFiltros ? "is-dimmed" : ""}"
+                            class="event-block ${temConflito ? "has-conflict" : ""} ${isSelected ? "is-selected" : ""} ${isMovingCard ? "is-moving" : ""}"
                             draggable="true"
                             data-event-turma="${t.id}"
                         >
@@ -468,7 +709,9 @@
                                 <span class="event-code">${t.codigo}</span>
                                 ${
                                     temConflito
-                                        ? `<span class="event-conflict-flag"><span class="dot dot-danger"></span><span class="sr-only">Conflito</span></span>`
+                                        ? `<span class="event-conflict-badge" title="${escapar(conflitoInfo.resumoTooltip)}">${conflitoInfo.curtoHtml}</span>`
+                                        : t.ambienteExigido === "Laboratório"
+                                        ? `<span class="event-tag-lab">LAB</span>`
                                         : ""
                                 }
                             </div>
@@ -481,8 +724,10 @@
                 return `
                 <td
                     class="${classeDrop}"
-                    tabindex="${classeDrop === 'is-drop-valid' ? '0' : '-1'}" data-cell-dia="${dia.id}"
+                    tabindex="${classeDrop === 'is-drop-valid' ? '0' : '-1'}"
+                    data-cell-dia="${dia.id}"
                     data-cell-slot="${slot.id}"
+                    ${tituloCelula ? `title="${escapar(tituloCelula)}"` : ""}
                 >
                     <div class="schedule-cell-inner">
                         ${blocosHtml}
@@ -569,7 +814,7 @@
 
                     <div class="detail-section">
                         <span class="detail-section-title">Requisitos</span>
-                        <div class="cell-muted">${turma.alunos} alunos · Exige ${turma.ambienteExigido} · Prof. ${escapar(turma.professor)}</div>
+                        <div class="cell-muted"><span class="mono-num">${turma.alunos}</span> alunos · Exige ${turma.ambienteExigido} · Prof. ${escapar(turma.professor)}</div>
                     </div>
                 </form>
             `;
@@ -589,26 +834,23 @@
             secaoRestricoesHtml = `
                 <div class="detail-section">
                     <span class="detail-section-title">Situação</span>
-                    <div class="status-inline">
-                        <span class="dot dot-warning"></span>
-                        Aguardando posicionamento na grade
-                    </div>
+                    <span class="pending-pill">Pendente de alocação</span>
                     <p class="cell-muted">
-                        Selecione um dos slots destacados em verde na matriz ao lado para alocar automaticamente em sala compatível.
+                        Selecione a turma no painel Não alocadas e clique em um horário livre da grade.
                     </p>
                 </div>`;
         } else if (diag.problemas.length > 0) {
             secaoRestricoesHtml = `
                 <div class="detail-section">
                     <span class="detail-section-title text-danger">
-                        ${diag.problemas.length} ${diag.problemas.length === 1 ? "problema encontrado" : "problemas encontrados"}
+                        ${diag.problemas.length} ${diag.problemas.length === 1 ? "conflito encontrado" : "conflitos encontrados"}
                     </span>
                     <div class="flex-col-gap-sm">
                         ${diag.problemas
                             .map(
                                 (p) => `
                             <div class="problem-callout">
-                                <div class="problem-callout-title">${p.categoria}</div>
+                                <div class="problem-callout-title">${rotuloRegraProblema(p.categoria)}</div>
                                 <div class="problem-callout-desc">${escapar(p.detalhe)}</div>
                             </div>`
                             )
@@ -640,13 +882,13 @@
                     <span class="detail-value">${escapar(turma.professor)}</span>
 
                     <span class="detail-label">Sala</span>
-                    <span class="detail-value">${turma.sala || "Não atribuída"}</span>
+                    <span class="detail-value">${turma.sala ? escapar(nomeEspaco(turma.sala)) : "Não atribuída"}</span>
 
                     <span class="detail-label">Horário</span>
-                    <span class="detail-value">${turma.slot ? `${turma.dias.join("/")} · ${turma.slot}` : "Sem horário"}</span>
+                    <span class="detail-value">${turma.slot ? `<span class="mono-num">${turma.dias.join("/")} · ${turma.slot}</span>` : "Sem horário"}</span>
 
                     <span class="detail-label">Estudantes</span>
-                    <span class="detail-value">${turma.alunos} alunos</span>
+                    <span class="detail-value"><span class="mono-num">${turma.alunos}</span> alunos</span>
 
                     <span class="detail-label">Ambiente</span>
                     <span class="detail-value">${turma.ambienteExigido}</span>
@@ -685,9 +927,15 @@
 
         if (!listContainer || !detailContainer) return;
 
+        document.querySelectorAll(".shift-seg-btn[data-conflict-filter]").forEach((btn) => {
+            const ativo = btn.getAttribute("data-conflict-filter") === appState.conflitos.filtro;
+            btn.classList.toggle("is-active", ativo);
+            btn.setAttribute("aria-pressed", String(ativo));
+        });
+
         const todosConflitos = obterConflitosConsolidados(appState.dados);
         if (countHeader) {
-            countHeader.textContent = `${todosConflitos.length} ${todosConflitos.length === 1 ? "crítico" : "críticos"}`;
+            countHeader.innerHTML = `<span class="mono-num">${todosConflitos.length}</span> ${todosConflitos.length === 1 ? "conflito ativo" : "conflitos ativos"}`;
         }
 
         const filtro = appState.conflitos.filtro;
@@ -708,16 +956,18 @@
             listContainer.innerHTML = filtrados
                 .map((c) => {
                     const isSelected = c.id === appState.conflitos.conflitoSelecionadoId;
+                    const turma = appState.dados.turmas.find((t) => t.id === c.turmaId);
+                    const diag = turma ? inspecionarTurma(appState.dados, turma) : { problemas: c.problemas };
+                    const info = turma ? obterRotuloConflito(turma, diag) : { curtoHtml: escapar(c.problemas[0].categoria), resumoTooltip: c.resumoPrincipal };
+                    const horarioMeta = turma && turma.slot ? `${escapar(nomeEspaco(turma.sala))} · ${turma.dias.join("/")} ${turma.slot}` : c.resumoPrincipal;
                     return `
                     <button type="button" class="triage-row ${isSelected ? "is-selected" : ""}" data-select-conflict="${c.id}">
-                        <div class="triage-row-main">
-                            <span class="dot dot-danger"></span>
-                            <div>
-                                <div class="triage-row-title">${c.codigo} · ${escapar(c.disciplina)}</div>
-                                <div class="triage-row-desc">${escapar(c.resumoPrincipal)}</div>
-                            </div>
+                        <div class="triage-row-top">
+                            <span class="cell-mono">${c.codigo}</span>
+                            <span class="event-conflict-badge" title="${escapar(info.resumoTooltip)}">${info.curtoHtml}</span>
                         </div>
-                        <span class="triage-severity">Crítico</span>
+                        <div class="triage-row-title">${escapar(c.disciplina)}</div>
+                        <div class="triage-row-desc">${horarioMeta}</div>
                     </button>`;
                 })
                 .join("");
@@ -745,18 +995,26 @@
                 <div class="conflict-detail-box">
                     <div>
                         <div class="cell-mono">${selecionado.codigo}</div>
-                        <h2 class="view-title">${selecionado.codigo} · ${selecionado.disciplina}</h2>
+                        <h2 class="view-title">${selecionado.codigo} · ${escapar(selecionado.disciplina)}</h2>
                     </div>
 
                     <div class="detail-section">
-                        <span class="detail-section-title">Problema</span>
-                        <div class="flex-col-gap-xs">
-                            ${selecionado.problemas.map((p) => `<p>${escapar(p.detalhe)}</p>`).join("")}
+                        <span class="detail-section-title">Regras violadas</span>
+                        <div class="flex-col-gap-sm">
+                            ${selecionado.problemas
+                                .map(
+                                    (p) => `
+                                <div class="problem-callout">
+                                    <div class="problem-callout-title">${rotuloRegraProblema(p.categoria)}</div>
+                                    <div class="problem-callout-desc">${escapar(p.detalhe)}</div>
+                                </div>`
+                                )
+                                .join("")}
                         </div>
                     </div>
 
                     <div class="detail-section">
-                        <span class="detail-section-title">Afeta</span>
+                        <span class="detail-section-title">Turmas afetadas</span>
                         <div class="flex-col-gap-xs">
                             ${afetadasUnicas
                                 .map(
@@ -764,7 +1022,7 @@
                                 <div>
                                     <span class="cell-mono">${af.codigo}</span> ·
                                     <span class="cell-primary">${escapar(af.disciplina)}</span>
-                                    <span class="cell-muted">(${af.dias.join("/")} ${af.slot} · ${af.sala})</span>
+                                    <span class="cell-muted">(<span class="mono-num">${af.dias.join("/")} ${af.slot}</span> · ${escapar(nomeEspaco(af.sala))})</span>
                                 </div>`
                                 )
                                 .join("")}
@@ -791,7 +1049,7 @@
                                         data-apply-alternative="${selecionado.id}"
                                         data-alt-index="${idx}"
                                     >
-                                        Aplicar alternativa ${idx + 1}
+                                        Aplicar alternativa <span class="mono-num">${idx + 1}</span>
                                     </button>
                                 </div>`
                                 )
@@ -803,10 +1061,7 @@
         } else {
             detalheConflitoHtml = `
                 <div class="conflict-detail-box">
-                    <div class="status-inline">
-                        <span class="dot dot-success"></span>
-                        <span class="cell-primary">${todosConflitos.length ? 'Nenhum conflito para este filtro' : 'Nenhum conflito crítico ativo'}</span>
-                    </div>
+                    <span class="status-pill is-valid">${todosConflitos.length ? 'Nenhum conflito para este filtro' : 'Sem conflitos ativos'}</span>
                     <p class="cell-muted">
                         ${todosConflitos.length ? 'Consulte as outras categorias para resolver as pendências.' : 'As alocações definidas passaram pela validação de docentes, espaços e capacidade.'}
                     </p>
@@ -814,23 +1069,21 @@
             `;
         }
 
+        const pillEstadoHtml = appState.dados.publicada
+            ? `<span class="status-pill is-valid">Publicada na sessão</span>`
+            : prontaParaPublicar
+            ? `<span class="status-pill is-valid">Pronta para publicação</span>`
+            : `<span class="status-pill is-pending">Aguardando resolução de pendências</span>`;
+
         detailContainer.innerHTML = `
             ${detalheConflitoHtml}
 
             <div class="publication-bar" id="secao-publicacao-proposta">
-                <div>
-                    <div class="detail-section-title">Proposta ${appState.dados.semestre}</div>
-                    <div class="cell-primary">
-                        Estado: ${
-                            appState.dados.publicada
-                                ? "Publicada na sessão"
-                                : prontaParaPublicar
-                                ? "Pronta para revisão"
-                                : "Aguardando resolução de pendências"
-                        }
-                    </div>
+                <div class="flex-col-gap-xs">
+                    <div class="detail-section-title">Proposta <span class="mono-num">${appState.dados.semestre}</span></div>
+                    <div>${pillEstadoHtml}</div>
                     <div class="cell-muted">
-                        ${alocadasCount} / ${todasTurmas.length} turmas alocadas · ${todosConflitos.length} ${todosConflitos.length === 1 ? 'conflito crítico' : 'conflitos críticos'}
+                        <span class="mono-num">${alocadasCount}/${todasTurmas.length}</span> turmas alocadas · <span class="mono-num">${todosConflitos.length}</span> ${todosConflitos.length === 1 ? 'conflito ativo' : 'conflitos ativos'}
                     </div>
                 </div>
                 <div class="flex-row-gap-sm">
@@ -853,11 +1106,23 @@
         const tbody = document.getElementById("espacos-tbody");
         if (!tbody) return;
 
+        document.querySelectorAll(".shift-seg-btn[data-espacos-tipo]").forEach((btn) => {
+            const ativo = btn.getAttribute("data-espacos-tipo") === appState.espacos.tipo;
+            btn.classList.toggle("is-active", ativo);
+            btn.setAttribute("aria-pressed", String(ativo));
+        });
+
+        document.querySelectorAll(".shift-seg-btn[data-espacos-status]").forEach((btn) => {
+            const ativo = btn.getAttribute("data-espacos-status") === appState.espacos.status;
+            btn.classList.toggle("is-active", ativo);
+            btn.setAttribute("aria-pressed", String(ativo));
+        });
+
         const { busca, tipo, status, espacoSelecionadoId } = appState.espacos;
         const termo = busca.trim().toLowerCase();
 
         const filtrados = appState.dados.espacos.filter((e) => {
-            const bateBusca = !termo || e.nome.toLowerCase().includes(termo) || e.equipamentos.join(" ").toLowerCase().includes(termo);
+            const bateBusca = !termo || e.nome.toLowerCase().includes(termo) || e.codigo.toLowerCase().includes(termo) || e.equipamentos.join(" ").toLowerCase().includes(termo);
             const bateTipo = tipo === "todos" || e.tipo === tipo;
             const bateStatus = status === "todos" || e.status === status;
             return bateBusca && bateTipo && bateStatus;
@@ -866,18 +1131,18 @@
         tbody.innerHTML = filtrados
             .map((e) => {
                 const isSelected = e.id === espacoSelecionadoId;
-                const dotClass = e.status === "Disponível" ? "dot-success" : e.status === "Manutenção" ? "dot-warning" : "dot-danger";
+                const pillClass = e.status === "Disponível" ? "is-valid" : e.status === "Manutenção" ? "is-pending" : "is-conflict";
                 return `
                 <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-espaco="${e.id}">
-                    <td class="cell-primary">${escapar(e.nome)}</td>
+                    <td>
+                        <div class="cell-primary">${escapar(e.nome)}</div>
+                        <div class="cell-mono">${escapar(e.codigo)}</div>
+                    </td>
                     <td>${e.tipo}</td>
-                    <td class="tabular-nums">${e.capacidade}</td>
+                    <td><span class="mono-num">${e.capacidade}</span> lug.</td>
                     <td class="cell-muted">${escapar(e.equipamentos.join(", "))}</td>
                     <td>
-                        <span class="status-inline">
-                            <span class="dot ${dotClass}"></span>
-                            ${e.status}
-                        </span>
+                        <span class="status-pill ${pillClass}">${e.status}</span>
                     </td>
                 </tr>`;
             })
@@ -938,6 +1203,7 @@
         }
 
         const turmasNaSala = appState.dados.turmas.filter((t) => t.sala === esp.id);
+        const pillClass = esp.status === "Disponível" ? "is-valid" : esp.status === "Manutenção" ? "is-pending" : "is-conflict";
 
         body.innerHTML = `
             <div class="detail-section">
@@ -956,9 +1222,9 @@
                 <span class="detail-section-title">Capacidade</span>
                 <div class="detail-grid">
                     <span class="detail-label">Estudantes</span>
-                    <span class="detail-value tabular-nums">${esp.capacidade} lugares</span>
+                    <span class="detail-value"><span class="mono-num">${esp.capacidade}</span> lugares</span>
                     <span class="detail-label">Computadores</span>
-                    <span class="detail-value tabular-nums">${esp.pcs} PCs</span>
+                    <span class="detail-value"><span class="mono-num">${esp.pcs}</span> PCs</span>
                 </div>
             </div>
 
@@ -969,15 +1235,12 @@
 
             <div class="detail-section">
                 <span class="detail-section-title">Status operacional</span>
-                <div class="status-inline">
-                    <span class="dot ${esp.status === "Disponível" ? "dot-success" : "dot-warning"}"></span>
-                    <span class="cell-primary">${esp.status}</span>
-                </div>
+                <div><span class="status-pill ${pillClass}">${esp.status}</span></div>
                 <div class="cell-muted">${escapar(esp.observacao)}</div>
             </div>
 
             <div class="detail-section">
-                <span class="detail-section-title">Turmas alocadas (${turmasNaSala.length})</span>
+                <span class="detail-section-title">Turmas alocadas (<span class="mono-num">${turmasNaSala.length}</span>)</span>
                 ${
                     turmasNaSala.length === 0
                         ? `<div class="cell-muted">Nenhuma turma posicionada neste espaço.</div>`
@@ -985,7 +1248,7 @@
                             ${turmasNaSala
                                 .map(
                                     (t) =>
-                                        `<div><span class="cell-mono">${t.codigo}</span> · ${escapar(t.disciplina)} <span class="cell-muted">(${t.dias.join("/")} ${t.slot})</span></div>`
+                                        `<div><span class="cell-mono">${t.codigo}</span> · ${escapar(t.disciplina)} <span class="cell-muted">(<span class="mono-num">${t.dias.join("/")} ${t.slot}</span>)</span></div>`
                                 )
                                 .join("")}
                         </div>`
@@ -1045,19 +1308,88 @@
     /* ==========================================================================
        5. TURMAS & DISCIPLINAS (#tela-turmas)
        ========================================================================== */
+    function renderizarChipsFiltrosTurmas() {
+        const chipsEl = document.getElementById("turmas-active-chips");
+        const filtrosBtn = document.getElementById("turmas-filters-btn");
+        const filtrosCount = document.getElementById("turmas-filters-count");
+        const popoverEl = document.getElementById("turmas-filters-popover");
+
+        const { curso, periodo, ambiente, filtrosAbertos } = appState.turmas;
+        const ativos = [curso, periodo, ambiente].filter((v) => v !== "todos").length;
+
+        if (filtrosBtn) {
+            filtrosBtn.classList.toggle("has-active", ativos > 0);
+            filtrosBtn.setAttribute("aria-expanded", String(Boolean(filtrosAbertos)));
+        }
+        if (filtrosCount) {
+            filtrosCount.textContent = ativos;
+            filtrosCount.hidden = ativos === 0;
+        }
+        if (popoverEl) {
+            popoverEl.classList.toggle("is-open", Boolean(filtrosAbertos));
+        }
+
+        if (!chipsEl) return;
+        const itens = [];
+        if (curso !== "todos") itens.push({ chave: "curso", rotulo: "Curso", valor: curso });
+        if (periodo !== "todos") itens.push({ chave: "periodo", rotulo: "Período", valor: periodo });
+        if (ambiente !== "todos") itens.push({ chave: "ambiente", rotulo: "Ambiente", valor: ambiente });
+
+        if (itens.length === 0) {
+            chipsEl.hidden = true;
+            chipsEl.innerHTML = "";
+            return;
+        }
+
+        chipsEl.hidden = false;
+        chipsEl.innerHTML = `
+            ${itens
+                .map(
+                    (it) => `
+                <button type="button" class="filter-chip" data-remove-turmas-filter="${it.chave}" aria-label="Remover filtro ${it.rotulo}">
+                    <span class="filter-chip-label">${it.rotulo}:</span>
+                    <span>${escapar(it.valor)}</span>
+                    <span class="filter-chip-close" aria-hidden="true">×</span>
+                </button>`
+                )
+                .join("")}
+            <button type="button" class="chips-clear-btn" data-clear-turmas-filters="true">Limpar filtros</button>
+        `;
+    }
+
     function renderizarTurmas() {
         const tbody = document.getElementById("turmas-tbody");
         const countEl = document.getElementById("turmas-total-count");
         if (!tbody) return;
 
+        document.querySelectorAll(".shift-seg-btn[data-turmas-status]").forEach((btn) => {
+            const ativo = btn.getAttribute("data-turmas-status") === appState.turmas.status;
+            btn.classList.toggle("is-active", ativo);
+            btn.setAttribute("aria-pressed", String(ativo));
+        });
+
         const { busca, curso, periodo, professor, status, ambiente, turmaSelecionadaId } = appState.turmas;
+        const selCurso = document.getElementById("turmas-filter-curso");
+        const selPeriodo = document.getElementById("turmas-filter-periodo");
+        const selAmb = document.getElementById("turmas-filter-ambiente");
+        if (selCurso) selCurso.value = curso;
+        if (selPeriodo) selPeriodo.value = periodo;
+        if (selAmb) selAmb.value = ambiente;
+
+        renderizarChipsFiltrosTurmas();
+
         const termo = busca.trim().toLowerCase();
 
         const filtradas = appState.dados.turmas.filter((t) => {
             const diag = inspecionarTurma(appState.dados, t);
             const estadoTurma = !diag.alocada ? "pendente" : diag.problemas.length > 0 ? "conflito" : "alocada";
 
-            const bateBusca = !termo || t.codigo.toLowerCase().includes(termo) || t.disciplina.toLowerCase().includes(termo);
+            const bateBusca =
+                !termo ||
+                t.codigo.toLowerCase().includes(termo) ||
+                t.disciplina.toLowerCase().includes(termo) ||
+                t.professor.toLowerCase().includes(termo) ||
+                nomeCompletoProfessor(t.professor).toLowerCase().includes(termo);
             const bateCurso = curso === "todos" || t.curso === curso;
             const batePeriodo = periodo === "todos" || t.periodo === periodo;
             const bateProf = professor === "todos" || t.professor === professor;
@@ -1074,22 +1406,30 @@
                 const diag = inspecionarTurma(appState.dados, t);
                 const isSelected = t.id === turmaSelecionadaId;
 
-                let statusHtml = `<span class="status-inline"><span class="dot dot-success"></span>${escapar(nomeEspaco(t.sala))} · ${t.dias.join("/")} ${t.slot}</span>`;
+                let statusHtml = `${escapar(nomeEspaco(t.sala))} · <span class="mono-num">${t.dias.join("/")} ${t.slot}</span>`;
                 if (!diag.alocada) {
-                    statusHtml = `<span class="status-inline"><span class="dot dot-warning"></span>Sem sala</span>`;
+                    statusHtml = `<span class="status-pill is-pending">Sem sala</span>`;
                 } else if (diag.problemas.length > 0) {
-                    statusHtml = `<span class="status-inline text-danger"><span class="dot dot-danger"></span>Conflito (${escapar(nomeEspaco(t.sala))})</span>`;
+                    const info = obterRotuloConflito(t, diag);
+                    statusHtml = `<span class="event-conflict-badge" title="${escapar(info.resumoTooltip)}">${info.curtoHtml}</span> <span class="cell-muted">${escapar(nomeEspaco(t.sala))}</span>`;
                 }
+
+                const ambienteHtml =
+                    t.ambienteExigido === "Laboratório"
+                        ? `<span class="event-tag-lab">LAB</span>`
+                        : t.ambienteExigido === "Auditório"
+                        ? `<span class="unallocated-tag">AUD</span>`
+                        : `<span class="cell-muted">${t.ambienteExigido}</span>`;
 
                 return `
                 <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-turma="${t.id}">
                     <td class="cell-mono">${t.codigo}</td>
                     <td class="cell-primary">${escapar(t.disciplina)}</td>
-                    <td>${t.turma}</td>
+                    <td class="mono-num">${t.turma}</td>
                     <td class="cell-muted">${t.curso} · ${t.periodo.replace(" Período", "")}</td>
                     <td>${escapar(t.professor)}</td>
-                    <td class="tabular-nums">${t.alunos}</td>
-                    <td class="cell-muted">${t.ambienteExigido}</td>
+                    <td class="mono-num">${t.alunos}</td>
+                    <td>${ambienteHtml}</td>
                     <td>${statusHtml}</td>
                 </tr>`;
             })
@@ -1169,7 +1509,7 @@
                     <span class="detail-label">Professor</span>
                     <span class="detail-value">${escapar(turma.professor)}</span>
                     <span class="detail-label">Estudantes</span>
-                    <span class="detail-value tabular-nums">${turma.alunos} matriculados</span>
+                    <span class="detail-value"><span class="mono-num">${turma.alunos}</span> matriculados</span>
                     <span class="detail-label">Ambiente</span>
                     <span class="detail-value">${turma.ambienteExigido}</span>
                 </div>
@@ -1179,9 +1519,9 @@
                 <span class="detail-section-title">Alocação na grade</span>
                 <div class="detail-grid">
                     <span class="detail-label">Sala</span>
-                    <span class="detail-value">${turma.sala || "Sem sala"}</span>
+                    <span class="detail-value">${turma.sala ? escapar(nomeEspaco(turma.sala)) : "Sem sala"}</span>
                     <span class="detail-label">Horário</span>
-                    <span class="detail-value">${turma.slot ? `${turma.dias.join("/")} · ${turma.slot}` : "Pendente"}</span>
+                    <span class="detail-value">${turma.slot ? `<span class="mono-num">${turma.dias.join("/")} · ${turma.slot}</span>` : "Pendente"}</span>
                 </div>
             </div>
 
@@ -1189,18 +1529,18 @@
                 <span class="detail-section-title">Validação</span>
                 ${
                     !diag.alocada
-                        ? `<div class="status-inline"><span class="dot dot-warning"></span>Turma aguardando alocação na matriz</div>`
+                        ? `<span class="status-pill is-pending">Aguardando alocação na grade</span>`
                         : diag.problemas.length > 0
                         ? diag.problemas
                               .map(
                                   (p) => `
                             <div class="problem-callout">
-                                <div class="problem-callout-title">${p.categoria}</div>
+                                <div class="problem-callout-title">${rotuloRegraProblema(p.categoria)}</div>
                                 <div class="problem-callout-desc">${escapar(p.detalhe)}</div>
                             </div>`
                               )
                               .join("")
-                        : `<div class="status-inline"><span class="dot dot-success"></span>Todas as restrições atendidas</div>`
+                        : `<span class="status-pill is-valid">Todas as restrições atendidas</span>`
                 }
             </div>
         `;
@@ -1218,7 +1558,14 @@
        ========================================================================== */
     function renderizarProfessores() {
         const tbody = document.getElementById("professores-tbody");
+        const countEl = document.getElementById("professores-total-count");
         if (!tbody) return;
+
+        document.querySelectorAll(".shift-seg-btn[data-prof-status]").forEach((btn) => {
+            const ativo = btn.getAttribute("data-prof-status") === appState.professores.status;
+            btn.classList.toggle("is-active", ativo);
+            btn.setAttribute("aria-pressed", String(ativo));
+        });
 
         const { busca, status, professorSelecionadoId } = appState.professores;
         const termo = busca.trim().toLowerCase();
@@ -1233,26 +1580,35 @@
             return bateBusca && bateStatus;
         });
 
+        if (countEl) {
+            countEl.innerHTML = `<span class="mono-num">${linhas.length}</span> ${linhas.length === 1 ? "docente" : "docentes"}`;
+        }
+
         tbody.innerHTML = linhas
             .map((p) => {
                 const turmasProf = appState.dados.turmas.filter((t) => t.professor === p.id);
                 const carga = window.SATIC_DATA.calcularCargaDocente(appState.dados, p.id);
-                const temConflito = turmasProf.some((t) => inspecionarTurma(appState.dados, t).problemas.some((pr) => pr.tipo === "docente"));
+                const problemasDocentes = turmasProf.flatMap((t) =>
+                    inspecionarTurma(appState.dados, t).problemas.filter((pr) => pr.tipo === "docente")
+                );
+                const temChoque = problemasDocentes.some((pr) => pr.categoria === "Professor");
+                const temIndisp = problemasDocentes.some((pr) => pr.categoria === "Disponibilidade");
                 const isSelected = p.id === professorSelecionadoId;
+
+                const statusBadge = temChoque
+                    ? `<span class="status-pill is-conflict">Choque docente</span>`
+                    : temIndisp
+                    ? `<span class="status-pill is-conflict">Indisponível</span>`
+                    : `<span class="status-pill is-valid">Regular</span>`;
 
                 return `
                 <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-professor="${p.id}">
                     <td class="cell-primary">${escapar(p.nome)}</td>
                     <td class="cell-mono">${p.siape}</td>
                     <td class="cell-muted">${p.regime}</td>
-                    <td class="tabular-nums">${carga}h / ${p.cargaMax}h</td>
-                    <td class="tabular-nums">${turmasProf.length}</td>
-                    <td>
-                        <span class="status-inline">
-                            <span class="dot ${temConflito ? "dot-danger" : "dot-success"}"></span>
-                            ${temConflito ? "Conflito" : "Regular"}
-                        </span>
-                    </td>
+                    <td class="mono-num">${carga}h / ${p.cargaMax}h</td>
+                    <td class="mono-num">${turmasProf.length}</td>
+                    <td>${statusBadge}</td>
                 </tr>`;
             })
             .join("");
@@ -1296,7 +1652,7 @@
         const carga = window.SATIC_DATA.calcularCargaDocente(appState.dados, prof.id);
 
         titleEl.textContent = prof.nome;
-        subEl.textContent = `SIAPE ${prof.siape} · ${prof.regime} · ${carga}h / ${prof.cargaMax}h`;
+        subEl.innerHTML = `SIAPE <span class="mono-num">${prof.siape}</span> · ${prof.regime} · <span class="mono-num">${carga}h / ${prof.cargaMax}h</span>`;
 
         const linhasMatrizHtml = SLOTS_INSTITUCIONAIS.map((slot) => {
             const cols = DIAS_SEMANA.map((dia) => {
@@ -1372,14 +1728,14 @@
             </div>
 
             <div class="detail-section">
-                <span class="detail-section-title">Turmas atribuídas (${turmasProf.length})</span>
+                <span class="detail-section-title">Turmas atribuídas (<span class="mono-num">${turmasProf.length}</span>)</span>
                 <div class="flex-col-gap-xs">
                     ${turmasProf
                         .map(
                             (t) => `
                         <div class="assigned-class-pill">
                             <span><strong class="cell-mono">${t.codigo}</strong> · ${escapar(t.disciplina)}</span>
-                            <span class="cell-muted">${t.slot ? `${t.dias.join("/")} ${t.slot}` : "Sem horário"}</span>
+                            <span class="cell-muted">${t.slot ? `<span class="mono-num">${t.dias.join("/")} ${t.slot}</span>` : "Sem horário"}</span>
                         </div>`
                         )
                         .join("")}
@@ -1416,10 +1772,10 @@
             title.textContent = "Gerar proposta de grade";
             body.innerHTML = `
                 <div class="gen-stats-grid">
-                    <div class="gen-stat-cell"><strong>${total}</strong><span>turmas</span></div>
-                    <div class="gen-stat-cell"><strong>${appState.dados.professores.length}</strong><span>professores</span></div>
-                    <div class="gen-stat-cell"><strong>${appState.dados.espacos.length}</strong><span>espaços</span></div>
-                    <div class="gen-stat-cell"><strong>${obterConflitosConsolidados(appState.dados).length}</strong><span>conflitos</span></div>
+                    <div class="gen-stat-cell"><strong class="mono-num">${total}</strong><span>turmas</span></div>
+                    <div class="gen-stat-cell"><strong class="mono-num">${appState.dados.professores.length}</strong><span>professores</span></div>
+                    <div class="gen-stat-cell"><strong class="mono-num">${appState.dados.espacos.length}</strong><span>espaços</span></div>
+                    <div class="gen-stat-cell"><strong class="mono-num">${obterConflitosConsolidados(appState.dados).length}</strong><span>conflitos</span></div>
                 </div>
                 <div class="detail-section">
                     <p class="cell-muted">Preenche pendências e corrige alocações inválidas. Revise a proposta antes de aplicar.</p>
@@ -1439,10 +1795,10 @@
             const r = resultadoGerador;
             title.textContent = r.completa && r.conflitos === 0 ? "Proposta pronta para revisão" : "Proposta parcial";
             body.innerHTML = `<div class="detail-grid">
-                <span class="detail-label">Alocadas</span><span class="detail-value">${r.alocadas} / ${total} turmas</span>
-                <span class="detail-label">Pendentes</span><span class="detail-value">${total - r.alocadas} turmas</span>
-                <span class="detail-label">Conflitos</span><span class="detail-value">${r.conflitos}</span>
-                <span class="detail-label">Tentativas</span><span class="detail-value">${r.tentativas}</span>
+                <span class="detail-label">Alocadas</span><span class="detail-value"><span class="mono-num">${r.alocadas} / ${total}</span> turmas</span>
+                <span class="detail-label">Pendentes</span><span class="detail-value"><span class="mono-num">${total - r.alocadas}</span> turmas</span>
+                <span class="detail-label">Conflitos</span><span class="detail-value mono-num">${r.conflitos}</span>
+                <span class="detail-label">Tentativas</span><span class="detail-value mono-num">${r.tentativas}</span>
                 </div>
                 ${!r.completa ? '<p class="cell-muted">Não foi encontrada uma solução completa com os espaços e disponibilidades atuais.</p>' : ''}`;
             footer.innerHTML = `<button type="button" class="btn btn-secondary" data-gen-action="config">Revisar prioridade</button><button type="button" class="btn btn-primary" data-gen-action="apply">Aplicar proposta</button>`;
@@ -1483,16 +1839,16 @@
 
         const q = termo.trim().toLowerCase();
         const comandos = [
-            { id: "nav:tela-matriz", titulo: "Ir para Matriz de Alocação (Grade)", meta: "Tela", icone: ICONS.calendar },
-            { id: "nav:tela-painel", titulo: "Ir para Visão Geral do Semestre", meta: "Tela", icone: ICONS.overview },
-            { id: "nav:tela-conflitos", titulo: "Abrir Central de Conflitos e Publicação", meta: "Tela", icone: ICONS.alert },
-            { id: "action:gerar-grade", titulo: "Gerar grade automaticamente", meta: "Automação", icone: ICONS.cpu },
-            { id: "action:reset-demo", titulo: "Restaurar estado inicial de demonstração (com conflitos)", meta: "Sistema", icone: ICONS.rotateCcw },
+            { id: "nav:tela-matriz", titulo: "Ir para Grade Horária", tituloHtml: "Ir para Grade Horária", meta: "Tela" },
+            { id: "nav:tela-painel", titulo: "Ir para Visão Geral do Semestre", tituloHtml: "Ir para Visão Geral do Semestre", meta: "Tela" },
+            { id: "nav:tela-conflitos", titulo: "Abrir Central de Conflitos e Publicação", tituloHtml: "Abrir Central de Conflitos e Publicação", meta: "Tela" },
+            { id: "action:gerar-grade", titulo: "Gerar grade automaticamente", tituloHtml: "Gerar grade automaticamente", meta: "Automação" },
+            { id: "action:reset-demo", titulo: "Restaurar estado inicial de demonstração", tituloHtml: "Restaurar estado inicial de demonstração", meta: "Sistema" },
             ...appState.dados.turmas.map((t) => ({
                 id: `turma:${t.id}`,
-                titulo: `${t.codigo} · ${escapar(t.disciplina)} (${escapar(t.professor)})`,
-                meta: t.sala ? `${escapar(nomeEspaco(t.sala))} · ${t.slot}` : "Não alocada",
-                icone: ICONS.book
+                titulo: `${t.codigo} · ${t.disciplina} (${t.professor})`,
+                tituloHtml: `<span class="mono-num">${t.codigo}</span> · ${escapar(t.disciplina)} (${escapar(t.professor)})`,
+                meta: t.sala ? `${escapar(nomeEspaco(t.sala))} · ${t.slot}` : "Não alocada"
             }))
         ];
 
@@ -1506,8 +1862,7 @@
                 (c) => `
             <button type="button" class="cmd-item" data-cmd-exec="${c.id}">
                 <span class="cmd-item-left">
-                    ${c.icone}
-                    <span>${c.titulo}</span>
+                    <span>${c.tituloHtml}</span>
                 </span>
                 <span class="cmd-shortcut">${c.meta}</span>
             </button>`
@@ -1520,7 +1875,7 @@
        ========================================================================== */
     function renderizarTudo() {
         if (appState.dados.publicada && assinaturaPublicada !== assinaturaDados()) appState.dados.publicada = false;
-        atualizarBadgesSidebar();
+        atualizarBadgesNavegacao();
         renderizarPainelGeral();
         renderizarMatriz();
         renderizarConflitosEPublicacao();
@@ -1529,18 +1884,66 @@
         renderizarProfessores();
     }
 
+    function cancelarMovimentoMatriz() {
+        const idMov = appState.matriz.turmaEmMovimentoId;
+        const turma = idMov ? appState.dados.turmas.find((t) => t.id === idMov) : null;
+        appState.matriz.turmaEmMovimentoId = null;
+        if (turma && (!turma.sala || !turma.slot)) {
+            appState.matriz.turmaSelecionadaId = null;
+        }
+    }
+
     function atualizarDestinosMovimento() {
         const turma = appState.dados.turmas.find((t) => t.id === appState.matriz.turmaEmMovimentoId);
         if (!turma) return;
-        document.getElementById('drawer-matriz').classList.remove('is-open');
-        document.getElementById('matrix-guide-bar').classList.add('is-active');
-        document.getElementById('matrix-guide-text').textContent = `${turma.codigo} selecionada. Selecione um horário disponível.`;
+        document.getElementById('drawer-matriz')?.classList.remove('is-open');
+        const scheduleGridEl = document.getElementById('matrix-schedule-grid');
+        if (scheduleGridEl) scheduleGridEl.classList.add('is-moving-mode');
+
+        document.querySelectorAll('[data-unallocated-id]').forEach((el) => {
+            el.classList.toggle('is-selected', el.getAttribute('data-unallocated-id') === turma.id);
+        });
+        document.querySelectorAll('[data-event-turma]').forEach((el) => {
+            el.classList.toggle('is-moving', el.getAttribute('data-event-turma') === turma.id);
+        });
+
+        const summaryEl = document.getElementById('matrix-summary-count');
+        const movingInlineEl = document.getElementById('matrix-moving-inline');
+        const movingTextEl = document.getElementById('matrix-moving-text');
+        const panelEl = document.getElementById('matrix-unallocated-panel');
+        const mostrarInlineMoving = Boolean(turma.sala || panelEl?.hidden);
+        if (movingInlineEl && movingTextEl) {
+            movingInlineEl.hidden = !mostrarInlineMoving;
+            if (summaryEl) summaryEl.hidden = mostrarInlineMoving;
+            if (mostrarInlineMoving) {
+                movingTextEl.innerHTML = `Movendo <span class="mono-num">${turma.codigo}</span>`;
+            }
+        }
+
         document.querySelectorAll('[data-cell-dia]').forEach((cell) => {
             const v = verificarViabilidadeSlot(appState.dados, turma, cell.dataset.cellDia, cell.dataset.cellSlot);
             cell.classList.toggle('is-drop-valid', v.valido);
             cell.classList.toggle('is-drop-invalid', !v.valido);
+            cell.classList.remove('is-drag-over');
             cell.tabIndex = v.valido ? 0 : -1;
-            cell.title = v.motivo;
+
+            const inner = cell.querySelector('.schedule-cell-inner');
+            if (!inner) return;
+            inner.querySelectorAll('.slot-alloc-action, .slot-blocked-reason').forEach((n) => n.remove());
+
+            const hint = document.createElement('div');
+            if (v.valido) {
+                const nomeSala = nomeEspaco(v.salaSugerida);
+                hint.className = 'slot-alloc-action';
+                hint.textContent = `Alocar em ${nomeSala}`;
+                cell.title = `Alocar em ${nomeSala}`;
+            } else {
+                const motivoCurto = formatarMotivoBloqueio(v, turma);
+                hint.className = 'slot-blocked-reason';
+                hint.textContent = motivoCurto;
+                cell.title = motivoCurto;
+            }
+            inner.appendChild(hint);
         });
     }
 
@@ -1566,6 +1969,16 @@
         document.addEventListener("click", (e) => {
             if (!e.target.closest(".dropdown-wrapper")) {
                 document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
+            }
+
+            if (appState.matriz.filtrosAbertos && !e.target.closest("#tela-matriz .filters-popover-wrap")) {
+                appState.matriz.filtrosAbertos = false;
+                renderizarChipsFiltrosMatriz();
+            }
+
+            if (appState.turmas.filtrosAbertos && !e.target.closest("[data-turmas-popover-wrap]")) {
+                appState.turmas.filtrosAbertos = false;
+                renderizarChipsFiltrosTurmas();
             }
 
             const navBtn = e.target.closest("[data-nav-target]");
@@ -1594,21 +2007,70 @@
                 return;
             }
 
-            const unallocBtn = e.target.closest("[data-unallocated-id]");
-            if (unallocBtn) {
-                const id = unallocBtn.getAttribute("data-unallocated-id");
-                appState.matriz.turmaSelecionadaId = id;
-                appState.matriz.modoEdicaoDrawer = false;
-                appState.matriz.turmaEmMovimentoId = appState.matriz.turmaEmMovimentoId === id ? null : id;
+            if (e.target.closest("[data-toggle-filters]")) {
+                appState.matriz.filtrosAbertos = !appState.matriz.filtrosAbertos;
+                renderizarChipsFiltrosMatriz();
+                return;
+            }
+
+            if (e.target.closest("[data-close-filters]")) {
+                appState.matriz.filtrosAbertos = false;
+                renderizarChipsFiltrosMatriz();
+                return;
+            }
+
+            if (e.target.closest("[data-clear-matrix-filters]")) {
+                Object.assign(appState.matriz, {
+                    curso: "todos",
+                    periodo: "todos",
+                    espaco: "todos",
+                    professor: "todos"
+                });
                 renderizarMatriz();
                 return;
             }
 
-            const eventBlock = e.target.closest("[data-event-turma]");
-            if (eventBlock) {
-                const id = eventBlock.getAttribute("data-event-turma");
-                appState.matriz.turmaSelecionadaId = id;
+            const removeFilterBtn = e.target.closest("[data-remove-filter]");
+            if (removeFilterBtn) {
+                const chave = removeFilterBtn.getAttribute("data-remove-filter");
+                if (chave in appState.matriz) {
+                    appState.matriz[chave] = "todos";
+                    renderizarMatriz();
+                }
+                return;
+            }
+
+            const shiftBtn = e.target.closest("[data-shift]");
+            if (shiftBtn) {
+                appState.matriz.turno = shiftBtn.getAttribute("data-shift");
+                renderizarMatriz();
+                return;
+            }
+
+            if (e.target.closest("[data-toggle-unallocated]")) {
+                appState.matriz.painelPendentesRecolhido = !appState.matriz.painelPendentesRecolhido;
+                renderizarMatriz();
+                return;
+            }
+
+            if (e.target.closest("[data-cancel-move]")) {
+                cancelarMovimentoMatriz();
+                renderizarMatriz();
+                return;
+            }
+
+            const unallocBtn = e.target.closest("[data-unallocated-id]");
+            if (unallocBtn) {
+                const id = unallocBtn.getAttribute("data-unallocated-id");
+                const estavaEmMovimento = appState.matriz.turmaEmMovimentoId === id;
                 appState.matriz.modoEdicaoDrawer = false;
+                if (estavaEmMovimento) {
+                    appState.matriz.turmaEmMovimentoId = null;
+                    appState.matriz.turmaSelecionadaId = null;
+                } else {
+                    appState.matriz.turmaEmMovimentoId = id;
+                    appState.matriz.turmaSelecionadaId = id;
+                }
                 renderizarMatriz();
                 return;
             }
@@ -1618,6 +2080,16 @@
                 const dia = validCell.getAttribute("data-cell-dia");
                 const slot = validCell.getAttribute("data-cell-slot");
                 alocarTurmaEmSlot(appState.matriz.turmaEmMovimentoId, dia, slot);
+                return;
+            }
+
+            const eventBlock = e.target.closest("[data-event-turma]");
+            if (eventBlock) {
+                const id = eventBlock.getAttribute("data-event-turma");
+                appState.matriz.turmaEmMovimentoId = null;
+                appState.matriz.turmaSelecionadaId = id;
+                appState.matriz.modoEdicaoDrawer = false;
+                renderizarMatriz();
                 return;
             }
 
@@ -1665,9 +2137,67 @@
             const filterConflictBtn = e.target.closest("[data-conflict-filter]");
             if (filterConflictBtn) {
                 appState.conflitos.filtro = filterConflictBtn.getAttribute("data-conflict-filter");
-                document.querySelectorAll("[data-conflict-filter]").forEach((b) => b.classList.remove("active"));
-                filterConflictBtn.classList.add("active");
                 renderizarConflitosEPublicacao();
+                return;
+            }
+
+            if (e.target.closest("[data-toggle-turmas-filters]")) {
+                appState.turmas.filtrosAbertos = !appState.turmas.filtrosAbertos;
+                renderizarChipsFiltrosTurmas();
+                return;
+            }
+
+            if (e.target.closest("[data-close-turmas-filters]")) {
+                appState.turmas.filtrosAbertos = false;
+                renderizarChipsFiltrosTurmas();
+                return;
+            }
+
+            if (e.target.closest("[data-clear-turmas-filters]")) {
+                Object.assign(appState.turmas, {
+                    curso: "todos",
+                    periodo: "todos",
+                    ambiente: "todos"
+                });
+                renderizarTurmas();
+                return;
+            }
+
+            const removeTurmaFilterBtn = e.target.closest("[data-remove-turmas-filter]");
+            if (removeTurmaFilterBtn) {
+                const chave = removeTurmaFilterBtn.getAttribute("data-remove-turmas-filter");
+                if (chave in appState.turmas) {
+                    appState.turmas[chave] = "todos";
+                    renderizarTurmas();
+                }
+                return;
+            }
+
+            const turmasStatusBtn = e.target.closest("[data-turmas-status]");
+            if (turmasStatusBtn) {
+                appState.turmas.status = turmasStatusBtn.getAttribute("data-turmas-status");
+                renderizarTurmas();
+                return;
+            }
+
+            const profStatusBtn = e.target.closest("[data-prof-status]");
+            if (profStatusBtn) {
+                appState.professores.status = profStatusBtn.getAttribute("data-prof-status");
+                renderizarProfessores();
+                return;
+            }
+
+            const espTipoBtn = e.target.closest("[data-espacos-tipo]");
+            if (espTipoBtn) {
+                appState.espacos.tipo = espTipoBtn.getAttribute("data-espacos-tipo");
+                renderizarEspacos();
+                return;
+            }
+
+            const espStatusBtn = e.target.closest("[data-espacos-status]");
+            if (espStatusBtn) {
+                appState.espacos.status = espStatusBtn.getAttribute("data-espacos-status");
+                renderizarEspacos();
                 return;
             }
 
@@ -1844,6 +2374,7 @@
             }
 
             if (e.target.closest("[data-open-cmd]")) {
+                document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
                 abrirCommandMenu();
                 return;
             }
@@ -1884,12 +2415,6 @@
                 return;
             }
 
-            if (e.target.closest("[data-cancel-move]")) {
-                appState.matriz.turmaEmMovimentoId = null;
-                renderizarMatriz();
-                return;
-            }
-
             if (e.target.closest("[data-cmd-close]")) {
                 fecharCommandMenu();
                 return;
@@ -1902,6 +2427,7 @@
             }
 
             if (e.target.closest("[data-reset-demo]")) {
+                document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
                 appState.dados = criarDadosIniciais();
                 renderizarTudo();
                 mostrarToast("Estado inicial restaurado.");
@@ -1930,6 +2456,24 @@
             const cell = e.target.closest("td[data-cell-dia]");
             if (cell) {
                 e.preventDefault();
+                if (cell.classList.contains("is-drop-valid")) {
+                    cell.classList.add("is-drag-over");
+                }
+            }
+        });
+
+        document.addEventListener("dragleave", (e) => {
+            const cell = e.target.closest("td.is-drag-over");
+            if (cell && (!e.relatedTarget || !cell.contains(e.relatedTarget))) {
+                cell.classList.remove("is-drag-over");
+            }
+        });
+
+        document.addEventListener("dragend", () => {
+            document.querySelectorAll("td.is-drag-over").forEach((c) => c.classList.remove("is-drag-over"));
+            if (appState.matriz.turmaEmMovimentoId) {
+                cancelarMovimentoMatriz();
+                renderizarMatriz();
             }
         });
 
@@ -1937,6 +2481,7 @@
             const cell = e.target.closest("td[data-cell-dia]");
             if (!cell) return;
             e.preventDefault();
+            document.querySelectorAll("td.is-drag-over").forEach((c) => c.classList.remove("is-drag-over"));
             const turmaId = e.dataTransfer.getData("text/plain") || appState.matriz.turmaEmMovimentoId;
             const dia = cell.getAttribute("data-cell-dia");
             const slot = cell.getAttribute("data-cell-slot");
@@ -1946,7 +2491,10 @@
         });
 
         document.addEventListener("input", (e) => {
-            if (e.target.id === "espacos-search") {
+            if (e.target.id === "matrix-search") {
+                appState.matriz.busca = e.target.value;
+                renderizarMatriz();
+            } else if (e.target.id === "espacos-search") {
                 appState.espacos.busca = e.target.value;
                 renderizarEspacos();
             } else if (e.target.id === "turmas-search") {
@@ -2005,7 +2553,7 @@
                 if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo?.focus(); }
                 else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro?.focus(); }
             }
-            if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-row-professor], [data-row-turma], [data-row-espaco], td.is-drop-valid')) {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-row-professor], [data-row-turma], [data-row-espaco], td.is-drop-valid, [data-unallocated-id]')) {
                 e.preventDefault();
                 e.target.click();
                 return;
@@ -2016,9 +2564,20 @@
             } else if (e.key === "Escape") {
                 fecharCommandMenu();
                 fecharModalGerarGrade();
+                document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
                 if (modalAberto) return;
+                if (appState.matriz.filtrosAbertos) {
+                    appState.matriz.filtrosAbertos = false;
+                    renderizarChipsFiltrosMatriz();
+                    return;
+                }
+                if (appState.turmas.filtrosAbertos) {
+                    appState.turmas.filtrosAbertos = false;
+                    renderizarChipsFiltrosTurmas();
+                    return;
+                }
                 if (appState.matriz.turmaEmMovimentoId) {
-                    appState.matriz.turmaEmMovimentoId = null;
+                    cancelarMovimentoMatriz();
                     renderizarMatriz();
                 } else {
                     appState.matriz.turmaSelecionadaId = null;

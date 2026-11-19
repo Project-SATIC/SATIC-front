@@ -1,57 +1,74 @@
 /* ==========================================================================
    SATIC — Sistema de Alocação de Turmas (IC / UFAL)
    Arquivo: css/tokens.css
-   Objetivo: Tokens de design para software administrativo denso (Linear-like)
+   Objetivo: Tokens do Guia de Estilo "Quadro Acadêmico Editorial"
    ========================================================================== */
 
 :root {
-    /* Superfícies Neutras */
-    --bg-app: #F7F7F8;
-    --bg-sidebar: #F2F3F5;
+    /* Base e superfícies */
+    --bg-canvas: #F6F5F1;
     --bg-surface: #FFFFFF;
-    --bg-subtle: #F4F5F7;
-    --bg-hover: #EBEDF0;
-    --bg-active: #E4E7EC;
-    --bg-selected: #EEF2FF;
-    --bg-selected-strong: #E0E7FF;
-    --bg-overlay: rgba(15, 23, 42, 0.35);
+    --bg-subtle: #EFECE6;
+    --bg-card: #FAF9F6;
+    --bg-hover: #EFECE6;
+    --bg-active: #E6E2D9;
+    --border-default: #E2DFD7;
+    --border-subtle: #EAE7DF;
+    --border-strong: #CBC6BA;
+    --bg-overlay: rgba(22, 37, 53, 0.36);
 
-    /* Tipografia e Cores de Texto */
-    --text-primary: #1F2328;
-    --text-secondary: #57606A;
-    --text-muted: #8C959F;
+    /* Tinta (texto) */
+    --text-primary: #162535;
+    --text-secondary: #5A6573;
+    --text-muted: #88919C;
     --text-on-accent: #FFFFFF;
 
-    /* Bordas e Divisores */
-    --border-subtle: #ECEEF1;
-    --border-default: #E2E5E9;
-    --border-strong: #CBD0D6;
-    --border-focus: #2563EB;
+    /* Marca e ação principal */
+    --brand-primary: #1B2A6B;
+    --brand-hover: #121E52;
+    --brand-tint: #EEF1FA;
+    --border-focus: var(--brand-primary);
 
-    /* Ação Institucional Discreta */
-    --accent-primary: #2457D6;
-    --accent-primary-hover: #1D46B0;
-    --accent-subtle: #EDF2FF;
+    /* Estados semânticos (ligados estritamente às Regras de Negócio) */
+    --conflict-fg: #9F1D22;
+    --conflict-bg: #FDF1F1;
+    --conflict-border: #F1C4C6;
 
-    /* Semântica Operacional (Usada com parcimônia apenas no ponto do problema) */
-    --danger-fg: #C92A2A;
-    --danger-bg: #FFF5F5;
-    --danger-border: #FFC9C9;
-    --danger-dot: #E03131;
+    --pending-fg: #8A5300;
+    --pending-bg: #FDF6E9;
+    --pending-border: #EED6A7;
 
-    --warning-fg: #B45309;
-    --warning-bg: #FFFBEB;
-    --warning-border: #FDE68A;
-    --warning-dot: #D97706;
+    --valid-fg: #1B5E3F;
+    --valid-bg: #EDF7F1;
+    --valid-border: #BFE2CE;
 
-    --success-fg: #15803D;
-    --success-bg: #F0FDF4;
-    --success-border: #BBF7D0;
-    --success-dot: #16A34A;
+    /* Aliases de compatibilidade para telas legadas */
+    --bg-app: var(--bg-canvas);
+    --bg-selected: var(--brand-tint);
+    --bg-selected-strong: #E1E7F7;
+    --accent-primary: var(--brand-primary);
+    --accent-primary-hover: var(--brand-hover);
+    --accent-subtle: var(--brand-tint);
+
+    --danger-fg: var(--conflict-fg);
+    --danger-bg: var(--conflict-bg);
+    --danger-border: var(--conflict-border);
+    --danger-dot: var(--conflict-fg);
+
+    --warning-fg: var(--pending-fg);
+    --warning-bg: var(--pending-bg);
+    --warning-border: var(--pending-border);
+    --warning-dot: var(--pending-fg);
+
+    --success-fg: var(--valid-fg);
+    --success-bg: var(--valid-bg);
+    --success-border: var(--valid-border);
+    --success-dot: var(--valid-fg);
 
     /* Tipografia */
-    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 
     --text-xs: 11.5px;
     --text-sm: 12.5px;
@@ -60,7 +77,7 @@
     --text-lg: 16px;
     --text-xl: 20px;
 
-    /* Espaçamentos Densos */
+    /* Espaçamentos */
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -69,23 +86,23 @@
     --space-6: 24px;
     --space-8: 32px;
 
-    /* Raios de Borda Contidos (Sem estética de landing page) */
-    --radius-xs: 3px;
-    --radius-sm: 5px;
+    /* Raios de borda */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
     --radius-md: 6px;
     --radius-lg: 8px;
 
-    /* Dimensões do Shell */
-    --sidebar-width: 212px;
+    /* Dimensões do shell */
+    --global-topbar-height: 56px;
     --topbar-height: 48px;
-    --drawer-width: 412px;
+    --drawer-width: 400px;
 
-    /* Sombras Funcionais (Apenas para camadas flutuantes) */
-    --shadow-dropdown: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
-    --shadow-drawer: -4px 0 20px rgba(15, 23, 42, 0.06);
-    --shadow-modal: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+    /* Sombras funcionais discretas (derivadas de #162535) */
+    --shadow-dropdown: 0 6px 18px rgba(22, 37, 53, 0.08), 0 1px 3px rgba(22, 37, 53, 0.05);
+    --shadow-drawer: -4px 0 20px rgba(22, 37, 53, 0.06);
+    --shadow-modal: 0 14px 32px rgba(22, 37, 53, 0.14), 0 2px 6px rgba(22, 37, 53, 0.06);
 
-    /* Transições Rápidas (Raycast / Linear feel) */
+    /* Transições */
     --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
     --transition-normal: 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -103,12 +120,11 @@ html,
 body {
     height: 100%;
     width: 100%;
-    background-color: var(--bg-app);
+    background-color: var(--bg-canvas);
     color: var(--text-primary);
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: 1.45;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -135,7 +151,10 @@ button {
     vertical-align: middle;
 }
 
-button:disabled { cursor: default; opacity: 0.55; }
+button:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
 
 a {
     color: inherit;
@@ -147,8 +166,13 @@ ol {
     list-style: none;
 }
 
-.tabular-nums {
+.tabular-nums,
+.mono-num {
     font-variant-numeric: tabular-nums;
+}
+
+.mono-num {
+    font-family: var(--font-mono);
 }
 
 /* Acessibilidade */
