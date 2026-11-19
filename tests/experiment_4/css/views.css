@@ -750,7 +750,7 @@ section[aria-labelledby="sec-periodos-heading"] .compact-metric-row {
 
 .schedule-grid tr {
     display: grid;
-    grid-template-columns: 96px repeat(5, minmax(0, 1fr));
+    grid-template-columns: 96px repeat(6, minmax(0, 1fr)); /* SEG–SAB */
 }
 
 .schedule-grid thead {
@@ -1585,4 +1585,32 @@ section[aria-labelledby="sec-periodos-heading"] .compact-metric-row {
     display: flex;
     flex-direction: column;
     gap: 24px;
+}
+
+/* ==========================================================================
+   Integração com a API (19/11/2026): aulas de 50 min, rascunho e aviso do servidor
+   ========================================================================== */
+.event-block.is-continuation { min-height: 0; padding-top: 2px; padding-bottom: 2px; opacity: 0.85; }
+.event-block.is-continuation .event-title,
+.event-block.is-continuation .event-sub { display: none; }
+.event-block.is-draft { outline: 2px dashed var(--color-accent, #2f6fde); outline-offset: -2px; }
+/* Aviso flutuante do rascunho: fica fora da barra do topo para não apertar a navegação */
+.draft-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60;
+    display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; border-radius: 10px;
+    background: var(--color-surface, #fff); border: 1px solid var(--color-border, #d9d6cf);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14); }
+.draft-bar[hidden] { display: none; }
+.draft-count { font-size: 0.85rem; white-space: nowrap; margin-right: 8px; }
+.api-status { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: var(--color-bg, #fff); }
+.api-status[hidden] { display: none; }
+.api-status-box { max-width: 460px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.main-workspace { position: relative; }
+
+@media print {
+    .topbar, .app-sidebar, .sidebar, .screen-toolbar, .matrix-unallocated-panel, .drawer, .draft-bar, .toast { display: none !important; }
+    .view-screen { display: none !important; }
+    .view-screen.print-target { display: block !important; }
+    .schedule-table, .schedule-table * { font-size: 9pt; }
+    .event-block { break-inside: avoid; border: 1px solid #999; }
 }

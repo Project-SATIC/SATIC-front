@@ -5,7 +5,8 @@
  */
 
 (function () {
-    const { SLOTS_INSTITUCIONAIS, DIAS_SEMANA, criarDadosIniciais, inspecionarTurma, obterConflitosConsolidados, verificarViabilidadeSlot } = window.SATIC_DATA;
+    const { SLOTS_INSTITUCIONAIS, DIAS_SEMANA, criarDadosIniciais, inspecionarTurma, obterConflitosConsolidados, verificarViabilidadeSlot,
+        ocupa, blocoDoDia, moverTurma, contarRascunho } = window.SATIC_DATA;
     const ICONS = window.SATIC_ICONS;
 
     const appState = {
@@ -62,6 +63,30 @@
 
     let toastTimer = null;
     let assinaturaPublicada = null;
+
+    function cursosDe(t) {
+        return String(t.curso || "").split(",").map((c) => c.trim()).filter(Boolean);
+    }
+
+    /** Docentes da turma: "Ranilson Paiva" ou "Willy Tiengo +3" (co-docência). */
+    function rotuloDocentes(t) {
+        const ids = t.professores && t.professores.length ? t.professores : (t.professor ? [t.professor] : []);
+        if (ids.length === 0) return "Sem docente";
+        return ids.length === 1 ? ids[0] : `${ids[0]} +${ids.length - 1}`;
+    }
+
+    /** Horário legível em blocos: "TER/QUI M3–M4", "SEX M3–M6", "SEG T5–T6 · SEX T1–T2". */
+    function rotuloHorario(t) {
+        const D = window.SATIC_DATA.dominio();
+        if (!t || !t.horario || !D) return "Sem horário";
+        const blocos = D.grade.blocosDoHorario(t.horario);
+        const grupos = new Map();
+        blocos.forEach((b) => {
+            const faixa = b.inicio === b.fim ? `${b.turno}${b.inicio}` : `${b.turno}${b.inicio}–${b.turno}${b.fim}`;
+            grupos.set(faixa, [...(grupos.get(faixa) || []), b.dia]);
+        });
+        return [...grupos.entries()].map(([faixa, dias]) => `${dias.join("/")} ${faixa}`).join(" · ");
+    }
 
     function escapar(valor) {
         return String(valor ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -216,7 +241,7 @@
             ...pendentes.map((p) => ({
                 codigo: p.codigo,
                 disciplina: p.disciplina,
-                detalhe: `${escapar(p.professor)} · ${p.alunos} alunos`,
+                detalhe: `${escapar(rotuloDocentes(p))} · ${p.alunos} alunos`,
                 badgeHtml: `<span class="status-pill is-pending">Sem sala</span>`,
                 acaoTexto: "Alocar",
                 acaoTipo: "alocar-matriz",
@@ -227,9 +252,7 @@
         const linhasOcupacao = appState.dados.espacos.map((esp) => {
             const slotsUsados = new Set();
             alocadas.forEach((t) => {
-                if (t.sala === esp.id) {
-                    t.dias.forEach((dia) => slotsUsados.add(dia + ':' + t.slot));
-                }
+                if (t.sala === esp.id) (t.aulas || []).forEach((a) => slotsUsados.add(a));
             });
             const taxa = Math.min(100, Math.round((slotsUsados.size / (SLOTS_INSTITUCIONAIS.length * DIAS_SEMANA.length)) * 100));
             return {
@@ -240,9 +263,9 @@
             };
         });
 
-        const periodos = ["1º Período", "2º Período", "3º Período", "4º Período", "5º Período"];
+        const periodos = ["CC", "EC", "IA"];
         const linhasPeriodo = periodos.map((per) => {
-            const doPeriodo = todasTurmas.filter((t) => t.periodo === per);
+            const doPeriodo = todasTurmas.filter((t) => cursosDe(t).includes(per));
             const alocadasPer = doPeriodo.filter((t) => Boolean(t.sala && t.slot));
             const temConflito = doPeriodo.some((t) => inspecionarTurma(appState.dados, t).problemas.length > 0);
             return {
@@ -257,7 +280,7 @@
             <div class="overview-hero">
                 <div>
                     <div class="overview-semester-tag">${appState.dados.semestre}</div>
-                    <div class="overview-courses-sub">Ciência da Computação · Engenharia da Computação</div>
+                    <div class="overview-courses-sub">Ciência da Computação · Engenharia da Computação · Inteligência Artificial</div>
                 </div>
                 <div class="overview-completion">
                     <div class="overview-completion-label"><span class="mono-num">${percentual}%</span> alocado</div>
@@ -337,7 +360,7 @@
 
                 <section aria-labelledby="sec-periodos-heading">
                     <div class="section-header-row">
-                        <h2 class="section-heading" id="sec-periodos-heading">Progresso por período</h2>
+                        <h2 class="section-heading" id="sec-periodos-heading">Progresso por curso</h2>
                         <button type="button" class="section-link" data-overview-jump="tela-matriz">Abrir grade</button>
                     </div>
                     <div>
@@ -553,18 +576,18 @@
 
         const passaFiltrosMatriz = (t) =>
             passaBusca(t) &&
-            (appState.matriz.curso === "todos" || t.curso === appState.matriz.curso) &&
+            (appState.matriz.curso === "todos" || cursosDe(t).includes(appState.matriz.curso)) &&
             (appState.matriz.periodo === "todos" || t.periodo === appState.matriz.periodo) &&
             (appState.matriz.espaco === "todos" || t.sala === appState.matriz.espaco) &&
-            (appState.matriz.professor === "todos" || t.professor === appState.matriz.professor);
+            (appState.matriz.professor === "todos" || (t.professores || []).includes(appState.matriz.professor));
 
         const todasNaoAlocadas = appState.dados.turmas.filter((t) => !t.sala || !t.slot);
         const naoAlocadas = todasNaoAlocadas.filter(
             (t) =>
                 passaBusca(t) &&
-                (appState.matriz.curso === "todos" || t.curso === appState.matriz.curso) &&
+                (appState.matriz.curso === "todos" || cursosDe(t).includes(appState.matriz.curso)) &&
                 (appState.matriz.periodo === "todos" || t.periodo === appState.matriz.periodo) &&
-                (appState.matriz.professor === "todos" || t.professor === appState.matriz.professor)
+                (appState.matriz.professor === "todos" || (t.professores || []).includes(appState.matriz.professor))
         );
 
         const semPendencias = todasNaoAlocadas.length === 0;
@@ -609,10 +632,10 @@
                                 <span>${t.codigo}</span>
                                 ${tagAmbiente}
                             </span>
-                            <span>${t.periodo.replace(" Período", "")}</span>
+                            <span>${escapar(t.curso)}</span>
                         </div>
                         <div class="unallocated-name">${escapar(t.disciplina)}</div>
-                        <div class="unallocated-meta"><span class="mono-num">${t.alunos}</span> alunos${reqTexto} · ${escapar(t.professor)}</div>
+                        <div class="unallocated-meta"><span class="mono-num">${t.alunos}</span> alunos${reqTexto} · ${escapar(rotuloDocentes(t))}</div>
                         ${
                             isMovingThis
                                 ? `<div class="unallocated-selected-bar">
@@ -654,8 +677,8 @@
         if (slotsVisiveis.length === 0) {
             tbodyGrade.innerHTML = `
                 <tr class="schedule-empty-row">
-                    <td colspan="6" class="schedule-empty-cell">
-                        <div>Nenhum horário cadastrado no turno da noite na oferta <span class="mono-num">${appState.dados.semestre}</span>.</div>
+                    <td colspan="7" class="schedule-empty-cell">
+                        <div>Nenhum horário neste turno na oferta <span class="mono-num">${appState.dados.semestre}</span>.</div>
                         <button type="button" class="btn btn-secondary" data-shift="todos">Ver todos os turnos</button>
                     </td>
                 </tr>`;
@@ -666,7 +689,7 @@
         tbodyGrade.innerHTML = slotsVisiveis.map((slot) => {
             const celulasDias = DIAS_SEMANA.map((dia) => {
                 const turmasCelula = appState.dados.turmas.filter(
-                    (t) => t.sala && t.slot === slot.id && t.dias.includes(dia.id) && passaFiltrosMatriz(t)
+                    (t) => t.sala && ocupa(t, dia.id, slot.id) && passaFiltrosMatriz(t)
                 );
 
                 let classeDrop = "";
@@ -697,13 +720,17 @@
                         const isSelected = appState.matriz.turmaSelecionadaId === t.id;
                         const isMovingCard = Boolean(turmaMovimento && turmaMovimento.id === t.id);
                         const conflitoInfo = temConflito ? obterRotuloConflito(t, diag) : null;
+                        const inicioBloco = blocoDoDia(t, dia.id)[0] === `${dia.id}-${slot.id}`;
+                        const noRascunho = Boolean(appState.dados.rascunho && appState.dados.rascunho[t.id]);
 
                         return `
                         <button
                             type="button"
-                            class="event-block ${temConflito ? "has-conflict" : ""} ${isSelected ? "is-selected" : ""} ${isMovingCard ? "is-moving" : ""}"
+                            class="event-block ${temConflito ? "has-conflict" : ""} ${isSelected ? "is-selected" : ""} ${isMovingCard ? "is-moving" : ""} ${inicioBloco ? "" : "is-continuation"} ${noRascunho ? "is-draft" : ""}"
                             draggable="true"
                             data-event-turma="${t.id}"
+                            data-event-dia="${dia.id}"
+                            title="${escapar(`${t.codigo} · ${rotuloHorario(t)}${inicioBloco ? "" : " (continuação do bloco)"}`)}"
                         >
                             <div class="event-top-row">
                                 <span class="event-code">${t.codigo}</span>
@@ -716,7 +743,7 @@
                                 }
                             </div>
                             <div class="event-title">${escapar(t.disciplina)}</div>
-                            <div class="event-sub">${escapar(nomeEspaco(t.sala))} · ${escapar(t.professor)}</div>
+                            <div class="event-sub">${escapar(nomeEspaco(t.sala))} · ${escapar(rotuloDocentes(t))}</div>
                         </button>`;
                     })
                     .join("");
@@ -778,29 +805,13 @@
                 )
                 .join("");
 
-            const opcoesSlot = SLOTS_INSTITUCIONAIS.map(
-                (s) => `<option value="${s.id}" ${turma.slot === s.id ? "selected" : ""}>${s.id} (${s.horario})</option>`
-            ).join("");
-
-            const parAtual = turma.dias && turma.dias.length ? turma.dias.join("/") : "SEG/QUA";
 
             body.innerHTML = `
                 <form id="form-editar-alocacao-matriz" class="form-stack">
                     <div class="form-group">
-                        <label class="form-label" for="edit-alloc-dias">Dias da semana</label>
-                        <select id="edit-alloc-dias" class="control-select">
-                            <option value="SEG,QUA" ${parAtual === "SEG/QUA" ? "selected" : ""}>Segunda e Quarta (SEG/QUA)</option>
-                            <option value="TER,QUI" ${parAtual === "TER/QUI" ? "selected" : ""}>Terça e Quinta (TER/QUI)</option>
-                            <option value="QUA,SEX" ${parAtual === "QUA/SEX" ? "selected" : ""}>Quarta e Sexta (QUA/SEX)</option>
-                            <option value="SEX" ${parAtual === "SEX" ? "selected" : ""}>Sexta-feira (SEX)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="edit-alloc-slot">Horário institucional</label>
-                        <select id="edit-alloc-slot" class="control-select">
-                            ${opcoesSlot}
-                        </select>
+                        <label class="form-label" for="edit-alloc-horario">Horário (notação SIGAA)</label>
+                        <input id="edit-alloc-horario" class="control-input mono-num" value="${escapar(turma.horario || "")}" placeholder="ex.: 35M34 ou 2T56 6T12" autocomplete="off">
+                        <span class="cell-muted">Dias 2–7 = SEG–SAB · M/T/N = turno · 1–6 = aulas de 50 min. A turma tem ${turma.aulasSemanais || "?"} aula(s) por semana.</span>
                     </div>
 
                     <div class="form-group">
@@ -814,7 +825,7 @@
 
                     <div class="detail-section">
                         <span class="detail-section-title">Requisitos</span>
-                        <div class="cell-muted"><span class="mono-num">${turma.alunos}</span> alunos · Exige ${turma.ambienteExigido} · Prof. ${escapar(turma.professor)}</div>
+                        <div class="cell-muted"><span class="mono-num">${turma.alunos}</span> alunos · Exige ${turma.ambienteExigido} · ${escapar((turma.professores || []).join(", ") || "sem docente")}</div>
                     </div>
                 </form>
             `;
@@ -879,13 +890,13 @@
             <div class="detail-section">
                 <div class="detail-grid">
                     <span class="detail-label">Professor</span>
-                    <span class="detail-value">${escapar(turma.professor)}</span>
+                    <span class="detail-value">${escapar((turma.professores || []).join(", ") || "Sem docente")}</span>
 
                     <span class="detail-label">Sala</span>
                     <span class="detail-value">${turma.sala ? escapar(nomeEspaco(turma.sala)) : "Não atribuída"}</span>
 
                     <span class="detail-label">Horário</span>
-                    <span class="detail-value">${turma.slot ? `<span class="mono-num">${turma.dias.join("/")} · ${turma.slot}</span>` : "Sem horário"}</span>
+                    <span class="detail-value">${turma.slot ? `<span class="mono-num">${rotuloHorario(turma)}</span>` : "Sem horário"}</span>
 
                     <span class="detail-label">Estudantes</span>
                     <span class="detail-value"><span class="mono-num">${turma.alunos}</span> alunos</span>
@@ -959,7 +970,7 @@
                     const turma = appState.dados.turmas.find((t) => t.id === c.turmaId);
                     const diag = turma ? inspecionarTurma(appState.dados, turma) : { problemas: c.problemas };
                     const info = turma ? obterRotuloConflito(turma, diag) : { curtoHtml: escapar(c.problemas[0].categoria), resumoTooltip: c.resumoPrincipal };
-                    const horarioMeta = turma && turma.slot ? `${escapar(nomeEspaco(turma.sala))} · ${turma.dias.join("/")} ${turma.slot}` : c.resumoPrincipal;
+                    const horarioMeta = turma && turma.slot ? `${escapar(nomeEspaco(turma.sala))} · ${rotuloHorario(turma)}` : c.resumoPrincipal;
                     return `
                     <button type="button" class="triage-row ${isSelected ? "is-selected" : ""}" data-select-conflict="${c.id}">
                         <div class="triage-row-top">
@@ -1022,7 +1033,7 @@
                                 <div>
                                     <span class="cell-mono">${af.codigo}</span> ·
                                     <span class="cell-primary">${escapar(af.disciplina)}</span>
-                                    <span class="cell-muted">(<span class="mono-num">${af.dias.join("/")} ${af.slot}</span> · ${escapar(nomeEspaco(af.sala))})</span>
+                                    <span class="cell-muted">(<span class="mono-num">${rotuloHorario(af)}</span> · ${escapar(nomeEspaco(af.sala))})</span>
                                 </div>`
                                 )
                                 .join("")}
@@ -1030,7 +1041,11 @@
                     </div>
 
                     <div class="detail-section">
-                        <span class="detail-section-title">Alternativas encontradas</span>
+                        <div class="flex-row-between">
+                            <span class="detail-section-title">Alternativas do motor</span>
+                            <button type="button" class="btn btn-secondary" data-motor-resolver="true">${selecionado.semSugestoes ? "Resolver via motor" : "Recalcular"}</button>
+                        </div>
+                        ${selecionado.alternativas.length === 0 ? `<p class="cell-muted">${selecionado.semSugestoes ? "Peça sugestões ao motor do servidor (horário + sala). Nada é gravado: a alternativa escolhida vai para o rascunho." : "O motor não encontrou alternativa para esta turma dentro do limite de busca. Ajuste à mão na grade."}</p>` : ""}
                         <div class="alternatives-list">
                             ${selecionado.alternativas
                                 .map(
@@ -1248,7 +1263,7 @@
                             ${turmasNaSala
                                 .map(
                                     (t) =>
-                                        `<div><span class="cell-mono">${t.codigo}</span> · ${escapar(t.disciplina)} <span class="cell-muted">(<span class="mono-num">${t.dias.join("/")} ${t.slot}</span>)</span></div>`
+                                        `<div><span class="cell-mono">${t.codigo}</span> · ${escapar(t.disciplina)} <span class="cell-muted">(<span class="mono-num">${rotuloHorario(t)}</span>)</span></div>`
                                 )
                                 .join("")}
                         </div>`
@@ -1390,9 +1405,9 @@
                 t.disciplina.toLowerCase().includes(termo) ||
                 t.professor.toLowerCase().includes(termo) ||
                 nomeCompletoProfessor(t.professor).toLowerCase().includes(termo);
-            const bateCurso = curso === "todos" || t.curso === curso;
+            const bateCurso = curso === "todos" || cursosDe(t).includes(curso);
             const batePeriodo = periodo === "todos" || t.periodo === periodo;
-            const bateProf = professor === "todos" || t.professor === professor;
+            const bateProf = professor === "todos" || (t.professores || []).includes(professor);
             const bateStatus = status === "todos" || estadoTurma === status;
             const bateAmb = ambiente === "todos" || t.ambienteExigido === ambiente;
 
@@ -1406,7 +1421,7 @@
                 const diag = inspecionarTurma(appState.dados, t);
                 const isSelected = t.id === turmaSelecionadaId;
 
-                let statusHtml = `${escapar(nomeEspaco(t.sala))} · <span class="mono-num">${t.dias.join("/")} ${t.slot}</span>`;
+                let statusHtml = `${escapar(nomeEspaco(t.sala))} · <span class="mono-num">${rotuloHorario(t)}</span>`;
                 if (!diag.alocada) {
                     statusHtml = `<span class="status-pill is-pending">Sem sala</span>`;
                 } else if (diag.problemas.length > 0) {
@@ -1426,8 +1441,8 @@
                     <td class="cell-mono">${t.codigo}</td>
                     <td class="cell-primary">${escapar(t.disciplina)}</td>
                     <td class="mono-num">${t.turma}</td>
-                    <td class="cell-muted">${t.curso} · ${t.periodo.replace(" Período", "")}</td>
-                    <td>${escapar(t.professor)}</td>
+                    <td class="cell-muted">${escapar(t.curso)}</td>
+                    <td>${escapar(rotuloDocentes(t))}</td>
                     <td class="mono-num">${t.alunos}</td>
                     <td>${ambienteHtml}</td>
                     <td>${statusHtml}</td>
@@ -1505,9 +1520,9 @@
                     <span class="detail-label">Código</span>
                     <span class="detail-value cell-mono">${turma.codigo}</span>
                     <span class="detail-label">Curso</span>
-                    <span class="detail-value">${turma.curso} · ${turma.periodo}</span>
+                    <span class="detail-value">${escapar(turma.curso)}</span>
                     <span class="detail-label">Professor</span>
-                    <span class="detail-value">${escapar(turma.professor)}</span>
+                    <span class="detail-value">${escapar((turma.professores || []).join(", ") || "Sem docente")}</span>
                     <span class="detail-label">Estudantes</span>
                     <span class="detail-value"><span class="mono-num">${turma.alunos}</span> matriculados</span>
                     <span class="detail-label">Ambiente</span>
@@ -1521,7 +1536,7 @@
                     <span class="detail-label">Sala</span>
                     <span class="detail-value">${turma.sala ? escapar(nomeEspaco(turma.sala)) : "Sem sala"}</span>
                     <span class="detail-label">Horário</span>
-                    <span class="detail-value">${turma.slot ? `<span class="mono-num">${turma.dias.join("/")} · ${turma.slot}</span>` : "Pendente"}</span>
+                    <span class="detail-value">${turma.slot ? `<span class="mono-num">${rotuloHorario(turma)}</span>` : "Pendente"}</span>
                 </div>
             </div>
 
@@ -1571,7 +1586,7 @@
         const termo = busca.trim().toLowerCase();
 
         const linhas = appState.dados.professores.filter((p) => {
-            const turmasProf = appState.dados.turmas.filter((t) => t.professor === p.id);
+            const turmasProf = appState.dados.turmas.filter((t) => (t.professores || []).includes(p.id));
             const temConflito = turmasProf.some((t) => inspecionarTurma(appState.dados, t).problemas.some((pr) => pr.tipo === "docente"));
             const estado = temConflito ? "conflito" : "regular";
 
@@ -1586,7 +1601,7 @@
 
         tbody.innerHTML = linhas
             .map((p) => {
-                const turmasProf = appState.dados.turmas.filter((t) => t.professor === p.id);
+                const turmasProf = appState.dados.turmas.filter((t) => (t.professores || []).includes(p.id));
                 const carga = window.SATIC_DATA.calcularCargaDocente(appState.dados, p.id);
                 const problemasDocentes = turmasProf.flatMap((t) =>
                     inspecionarTurma(appState.dados, t).problemas.filter((pr) => pr.tipo === "docente")
@@ -1606,7 +1621,7 @@
                     <td class="cell-primary">${escapar(p.nome)}</td>
                     <td class="cell-mono">${p.siape}</td>
                     <td class="cell-muted">${p.regime}</td>
-                    <td class="mono-num">${carga}h / ${p.cargaMax}h</td>
+                    <td class="mono-num">${carga} aulas/sem</td>
                     <td class="mono-num">${turmasProf.length}</td>
                     <td>${statusBadge}</td>
                 </tr>`;
@@ -1623,7 +1638,7 @@
         const chave = appState.professores.slotSelecionado;
         if (!chave) return '';
         const [dia, slot] = chave.split(':');
-        const aulas = turmas.filter((t) => t.sala && t.slot === slot && t.dias.includes(dia));
+        const aulas = turmas.filter((t) => t.sala && ocupa(t, dia, slot));
         if (!aulas.length) return '';
         return `<div class="detail-section availability-detail">
             <span class="detail-section-title">${dia} · ${slot}</span>
@@ -1648,18 +1663,18 @@
         }
 
         drawer.classList.add("is-open");
-        const turmasProf = appState.dados.turmas.filter((t) => t.professor === prof.id);
+        const turmasProf = appState.dados.turmas.filter((t) => (t.professores || []).includes(prof.id));
         const carga = window.SATIC_DATA.calcularCargaDocente(appState.dados, prof.id);
 
         titleEl.textContent = prof.nome;
-        subEl.innerHTML = `SIAPE <span class="mono-num">${prof.siape}</span> · ${prof.regime} · <span class="mono-num">${carga}h / ${prof.cargaMax}h</span>`;
+        subEl.innerHTML = `SIAPE <span class="mono-num">${prof.siape}</span> · ${prof.regime} · <span class="mono-num">${carga} aulas/sem</span>`;
 
         const linhasMatrizHtml = SLOTS_INSTITUCIONAIS.map((slot) => {
             const cols = DIAS_SEMANA.map((dia) => {
                 const chave = `${dia.id}:${slot.id}`;
                 const estadoDisp = prof.disponibilidade[chave] || "disponivel";
 
-                const aulasSlot = turmasProf.filter((t) => t.sala && t.slot === slot.id && t.dias.includes(dia.id));
+                const aulasSlot = turmasProf.filter((t) => t.sala && ocupa(t, dia.id, slot.id));
                 let rotulo = "Disp.";
                 let classeEstado = "";
 
@@ -1735,7 +1750,7 @@
                             (t) => `
                         <div class="assigned-class-pill">
                             <span><strong class="cell-mono">${t.codigo}</strong> · ${escapar(t.disciplina)}</span>
-                            <span class="cell-muted">${t.slot ? `<span class="mono-num">${t.dias.join("/")} ${t.slot}</span>` : "Sem horário"}</span>
+                            <span class="cell-muted">${t.slot ? `<span class="mono-num">${rotuloHorario(t)}</span>` : "Sem horário"}</span>
                         </div>`
                         )
                         .join("")}
@@ -1778,8 +1793,8 @@
                     <div class="gen-stat-cell"><strong class="mono-num">${obterConflitosConsolidados(appState.dados).length}</strong><span>conflitos</span></div>
                 </div>
                 <div class="detail-section">
-                    <p class="cell-muted">Preenche pendências e corrige alocações inválidas. Revise a proposta antes de aplicar.</p>
-                    <span class="detail-section-title">Prioridade</span>
+                    <p class="cell-muted">Consolida a grade: o servidor verifica os conflitos e o motor sugere horário e sala para resolvê-los (prefere trocar sala a mudar horário). Nada é gravado: o plano vai para o rascunho até você clicar em Confirmar tudo.</p>
+                    <span class="detail-section-title">Prioridade <span class="cell-muted">(ainda não usada pelo motor do servidor)</span></span>
                     <div class="radio-stack">
                         <label class="radio-option"><input type="radio" name="opt-prio" value="valida" ${prioridadeGerador === 'valida' ? 'checked' : ''}><span>Encontrar uma solução válida</span></label>
                         <label class="radio-option"><input type="radio" name="opt-prio" value="janelas" ${prioridadeGerador === 'janelas' ? 'checked' : ''}><span>Agrupar horários docentes</span></label>
@@ -1789,30 +1804,42 @@
             footer.innerHTML = `<button type="button" class="btn btn-ghost" data-gen-action="close">Cancelar</button><button type="button" class="btn btn-primary" data-gen-action="start">Gerar grade</button>`;
         } else if (etapa === "running") {
             prioridadeGerador = document.querySelector('input[name="opt-prio"]:checked')?.value || prioridadeGerador;
-            resultadoGerador = window.SATIC_DATA.gerarPropostaGrade(appState.dados, prioridadeGerador);
-            renderizarEtapaGerador("done");
+            body.innerHTML = `<p class="cell-muted">Consultando o motor do servidor…</p>`;
+            footer.innerHTML = "";
+            window.SATIC_DATA.gerarPropostaGrade(appState.dados).then((r) => {
+                resultadoGerador = r;
+                renderizarEtapaGerador("done");
+            }).catch((err) => {
+                body.innerHTML = `<p class="text-danger">${escapar(err.message)}</p>`;
+                footer.innerHTML = `<button type="button" class="btn btn-ghost" data-gen-action="close">Fechar</button>`;
+            });
         } else if (etapa === "done" && resultadoGerador) {
             const r = resultadoGerador;
-            title.textContent = r.completa && r.conflitos === 0 ? "Proposta pronta para revisão" : "Proposta parcial";
+            const n = r.plano ? r.plano.mudancas.length : 0;
+            title.textContent = r.conflitos.length === 0 && r.pendentes.length === 0 ? "Grade consolidada" : n > 0 ? "Plano do motor" : "Conflitos sem solução automática";
             body.innerHTML = `<div class="detail-grid">
-                <span class="detail-label">Alocadas</span><span class="detail-value"><span class="mono-num">${r.alocadas} / ${total}</span> turmas</span>
-                <span class="detail-label">Pendentes</span><span class="detail-value"><span class="mono-num">${total - r.alocadas}</span> turmas</span>
-                <span class="detail-label">Conflitos</span><span class="detail-value mono-num">${r.conflitos}</span>
-                <span class="detail-label">Tentativas</span><span class="detail-value mono-num">${r.tentativas}</span>
+                <span class="detail-label">Conflitos</span><span class="detail-value mono-num">${r.conflitos.length}</span>
+                <span class="detail-label">Pendentes</span><span class="detail-value mono-num">${r.pendentes.length}</span>
+                <span class="detail-label">Mudanças sugeridas</span><span class="detail-value mono-num">${n}</span>
+                <span class="detail-label">Sem solução</span><span class="detail-value mono-num">${r.naoResolvidos.length}</span>
+                <span class="detail-label">Busca</span><span class="detail-value"><span class="mono-num">${r.nosVisitados}</span> nós · <span class="mono-num">${r.tempoMs}</span> ms</span>
                 </div>
-                ${!r.completa ? '<p class="cell-muted">Não foi encontrada uma solução completa com os espaços e disponibilidades atuais.</p>' : ''}`;
-            footer.innerHTML = `<button type="button" class="btn btn-secondary" data-gen-action="config">Revisar prioridade</button><button type="button" class="btn btn-primary" data-gen-action="apply">Aplicar proposta</button>`;
+                ${n ? `<ul class="check-list">${r.plano.mudancas.map((m) => `<li class="check-list-item"><span class="cell-mono">${escapar(m.turma)}</span> ${escapar(m.de.horario)}${m.de.sala ? " · " + escapar(m.de.sala) : ""} → ${escapar(m.para.horario)} · ${escapar(m.para.sala)}</li>`).join("")}</ul>` : ""}
+                ${r.naoResolvidos.length ? `<p class="cell-muted">${r.naoResolvidos.map((x) => escapar(x.turma + ": " + x.motivo)).join("<br>")}</p>` : ""}
+                ${r.conflitos.length === 0 && r.pendentes.length === 0 ? `<p class="cell-muted">Sem conflitos nem pendências. Exporte a grade em ICS, PDF ou CSV pela Central de Conflitos.</p>` : ""}`;
+            footer.innerHTML = `<button type="button" class="btn btn-secondary" data-gen-action="close">Fechar</button>${n ? `<button type="button" class="btn btn-primary" data-gen-action="apply">Colocar no rascunho</button>` : ""}`;
         }
     }
 
     function aplicarGradeOtimizada() {
         if (!resultadoGerador) return;
-        appState.dados = resultadoGerador.dados;
+        if (resultadoGerador.plano) window.SATIC_DATA.aplicarMudancas(appState.dados, resultadoGerador.plano.mudancas);
+        appState.dados.sugestoes = null;
         appState.matriz.turmaEmMovimentoId = null;
         appState.matriz.turmaSelecionadaId = null;
         fecharModalGerarGrade();
         navegarPara("tela-matriz");
-        mostrarToast("Proposta aplicada. Revise a grade antes de publicar.");
+        mostrarToast("Plano do motor no rascunho. Revise e clique em Confirmar tudo para gravar.");
     }
     function abrirCommandMenu() {
         const modal = document.getElementById("modal-command");
@@ -1847,8 +1874,8 @@
             ...appState.dados.turmas.map((t) => ({
                 id: `turma:${t.id}`,
                 titulo: `${t.codigo} · ${t.disciplina} (${t.professor})`,
-                tituloHtml: `<span class="mono-num">${t.codigo}</span> · ${escapar(t.disciplina)} (${escapar(t.professor)})`,
-                meta: t.sala ? `${escapar(nomeEspaco(t.sala))} · ${t.slot}` : "Não alocada"
+                tituloHtml: `<span class="mono-num">${t.codigo}</span> · ${escapar(t.disciplina)} (${escapar(rotuloDocentes(t))})`,
+                meta: t.sala ? `${escapar(nomeEspaco(t.sala))} · ${rotuloHorario(t)}` : "Não alocada"
             }))
         ];
 
@@ -1874,6 +1901,7 @@
        RENDERIZAÇÃO UNIFICADA E EVENTOS
        ========================================================================== */
     function renderizarTudo() {
+        atualizarBarraRascunho();
         if (appState.dados.publicada && assinaturaPublicada !== assinaturaDados()) appState.dados.publicada = false;
         atualizarBadgesNavegacao();
         renderizarPainelGeral();
@@ -1948,9 +1976,9 @@
     }
 
     function exportarCSV() {
-        const linhas = [['Código', 'Disciplina', 'Turma', 'Curso', 'Professor', 'Alunos', 'Espaço', 'Dias', 'Slot']];
-        appState.dados.turmas.forEach((t) => linhas.push([t.codigo, t.disciplina, t.turma, t.curso, t.professor,
-            t.alunos, appState.dados.espacos.find((e) => e.id === t.sala)?.nome || '', t.dias.join('/'), t.slot || '']));
+        const linhas = [['Código', 'Disciplina', 'Turma', 'Curso', 'Docentes', 'Alunos', 'Espaço', 'Horário', 'Código SIGAA']];
+        appState.dados.turmas.forEach((t) => linhas.push([t.codigo, t.disciplina, t.turma, t.curso, (t.professores || []).join(', '),
+            t.alunos, appState.dados.espacos.find((e) => e.id === t.sala)?.nome || '', rotuloHorario(t), t.horario || '']));
         const csv = '\ufeff' + linhas.map((linha) => linha.map((valor) => {
             let texto = String(valor);
             if (/^[=+@-]/.test(texto)) texto = "'" + texto;
@@ -2070,6 +2098,7 @@
                 } else {
                     appState.matriz.turmaEmMovimentoId = id;
                     appState.matriz.turmaSelecionadaId = id;
+                    appState.dados.movimento = { turmaId: id, diaOrigem: null };
                 }
                 renderizarMatriz();
                 return;
@@ -2088,6 +2117,7 @@
                 const id = eventBlock.getAttribute("data-event-turma");
                 appState.matriz.turmaEmMovimentoId = null;
                 appState.matriz.turmaSelecionadaId = id;
+                appState.matriz.diaSelecionado = eventBlock.getAttribute("data-event-dia");
                 appState.matriz.modoEdicaoDrawer = false;
                 renderizarMatriz();
                 return;
@@ -2108,25 +2138,27 @@
                     appState.matriz.modoEdicaoDrawer = false;
                     renderizarDrawerMatriz();
                 } else if (action === "save-edit" && turma) {
-                    const diasVal = document.getElementById("edit-alloc-dias").value.split(",");
-                    const slotVal = document.getElementById("edit-alloc-slot").value;
+                    const horarioVal = document.getElementById("edit-alloc-horario").value.trim().toUpperCase().replace(/\s+/g, " ");
                     const salaVal = document.getElementById("edit-alloc-sala").value;
-                    turma.dias = diasVal;
-                    turma.slot = slotVal;
-                    turma.sala = salaVal;
+                    try {
+                        window.SATIC_DATA.dominio().horario.obterConjuntoSlots(horarioVal);
+                    } catch (err) {
+                        mostrarToast(`Horário inválido: ${err.message}`);
+                        return;
+                    }
+                    moverTurma(appState.dados, turma, { sala: salaVal, horario: horarioVal });
                     appState.matriz.modoEdicaoDrawer = false;
                     appState.matriz.turmaEmMovimentoId = null;
                     renderizarTudo();
-                    mostrarToast(`${turma.codigo} atualizada para ${diasVal.join("/")} ${slotVal} · ${salaVal}.`);
+                    mostrarToast(`${turma.codigo}: ${rotuloHorario(turma)} · ${nomeEspaco(salaVal)} (no rascunho).`);
                 } else if (action === "unassign" && turma) {
-                    turma.sala = null;
-                    turma.slot = null;
-                    turma.dias = [];
+                    moverTurma(appState.dados, turma, { sala: null });
                     appState.matriz.modoEdicaoDrawer = false;
                     renderizarTudo();
                     mostrarToast(`${turma.codigo} movida para a fila de não alocadas.`);
                 } else if (action === "move-on-grid" && turma) {
                     appState.matriz.turmaEmMovimentoId = appState.matriz.turmaEmMovimentoId === turma.id ? null : turma.id;
+                    appState.dados.movimento = { turmaId: turma.id, diaOrigem: appState.matriz.diaSelecionado || turma.dias[0] || null };
                     renderizarMatriz();
                 } else if (action === "open-conflict" && turma) {
                     navegarPara("tela-conflitos", { selecionarConflito: `conf-${turma.id}` });
@@ -2216,8 +2248,9 @@
                 const conf = conflitos.find((c) => c.id === confId);
                 if (conf && conf.alternativas[altIdx]) {
                     conf.alternativas[altIdx].aplicar(appState.dados);
+                    appState.dados.sugestoes = null; // as demais sugestões podem ter ficado velhas
                     renderizarTudo();
-                    mostrarToast(`Alternativa aplicada: ${conf.alternativas[altIdx].descricao}`);
+                    mostrarToast(`No rascunho: ${conf.alternativas[altIdx].descricao}. Clique em Confirmar tudo para gravar.`);
                 }
                 return;
             }
@@ -2226,7 +2259,9 @@
             if (pubBtn) {
                 const conflitos = obterConflitosConsolidados(appState.dados);
                 const pendentes = appState.dados.turmas.some((t) => !inspecionarTurma(appState.dados, t).alocada);
-                if (conflitos.length > 0 || pendentes) {
+                if (contarRascunho(appState.dados) > 0) {
+                    mostrarToast("Confirme ou descarte as alterações do rascunho antes de publicar.");
+                } else if (conflitos.length > 0 || pendentes) {
                     mostrarToast(`Resolva os ${conflitos.length} conflitos críticos antes de publicar a grade.`);
                 } else {
                     appState.dados.publicada = true;
@@ -2388,9 +2423,7 @@
                 } else if (cmd === "action:gerar-grade") {
                     abrirModalGerarGrade();
                 } else if (cmd === "action:reset-demo") {
-                    appState.dados = criarDadosIniciais();
-                    renderizarTudo();
-                    mostrarToast("Dados de demonstração restaurados.");
+                    recarregarDoServidor();
                 } else if (cmd.startsWith("turma:")) {
                     const tId = cmd.replace("turma:", "");
                     navegarPara("tela-matriz", { selecionarTurmaMatriz: tId });
@@ -2411,6 +2444,8 @@
                 const tipoExp = exportItem.getAttribute("data-export-type");
                 document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
                 if (tipoExp.includes('CSV')) exportarCSV();
+                else if (tipoExp.includes('ICS')) exportarICS();
+                else if (tipoExp.includes('PDF')) imprimirGrade(tipoExp.includes('professor'));
                 else mostrarToast(`Exportação ${tipoExp}: ainda não implementada nesta versão.`);
                 return;
             }
@@ -2428,9 +2463,7 @@
 
             if (e.target.closest("[data-reset-demo]")) {
                 document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
-                appState.dados = criarDadosIniciais();
-                renderizarTudo();
-                mostrarToast("Estado inicial restaurado.");
+                recarregarDoServidor();
             }
         });
 
@@ -2439,12 +2472,14 @@
             const block = e.target.closest("[data-event-turma]");
             if (unalloc) {
                 const id = unalloc.getAttribute("data-unallocated-id");
+                appState.dados.movimento = { turmaId: id, diaOrigem: null };
                 appState.matriz.turmaEmMovimentoId = id;
                 appState.matriz.turmaSelecionadaId = id;
                 e.dataTransfer.setData("text/plain", id);
                 atualizarDestinosMovimento();
             } else if (block) {
                 const id = block.getAttribute("data-event-turma");
+                appState.dados.movimento = { turmaId: id, diaOrigem: block.getAttribute("data-event-dia") || null };
                 appState.matriz.turmaEmMovimentoId = id;
                 appState.matriz.turmaSelecionadaId = id;
                 e.dataTransfer.setData("text/plain", id);
@@ -2603,14 +2638,13 @@
             return;
         }
 
-        turma.dias = viabilidade.dias;
-        turma.slot = slotId;
-        turma.sala = viabilidade.salaSugerida;
+        moverTurma(appState.dados, turma, { sala: viabilidade.salaSugerida, horario: viabilidade.novoHorario });
+        appState.dados.movimento = null;
 
         appState.matriz.turmaEmMovimentoId = null;
         appState.matriz.turmaSelecionadaId = turma.id;
         renderizarTudo();
-        mostrarToast(`${turma.codigo} alocada em ${viabilidade.dias.join("/")} ${slotId} · ${viabilidade.salaSugerida}.`);
+        mostrarToast(`${turma.codigo}: ${rotuloHorario(turma)} · ${nomeEspaco(viabilidade.salaSugerida)}${viabilidade.origemSala === "sugerida" ? " (sala sugerida)" : ""} — no rascunho.`);
     }
 
     function salvarFormularioEspaco() {
@@ -2670,8 +2704,217 @@
         renderizarTudo();
     }
 
+    /* ==========================================================================
+       Servidor: carga inicial, rascunho e aviso de indisponibilidade
+       ========================================================================== */
+    function mostrarStatusApi(estado, mensagem) {
+        const box = document.getElementById("api-status");
+        if (!box) return;
+        box.hidden = estado === "ok";
+        const titulo = document.getElementById("api-status-title");
+        const msg = document.getElementById("api-status-msg");
+        const retry = box.querySelector("[data-api-retry]");
+        if (estado === "carregando") {
+            titulo.textContent = "Conectando ao servidor…";
+            msg.textContent = "Carregando turmas, salas, docentes e regras do SATIC.";
+            retry.hidden = true;
+        } else if (estado === "erro") {
+            titulo.textContent = "Servidor indisponível";
+            msg.textContent = `${mensagem} Verifique se a API está no ar (no SATIC-back/ts: npm run local) e tente de novo.`;
+            retry.hidden = false;
+        }
+    }
+
+    async function carregarDoServidor() {
+        mostrarStatusApi("carregando");
+        try {
+            const novo = await window.SATIC_DATA.carregar(appState.dados.semestre || "2026.2");
+            if (appState.dados.carregado) novo.publicada = appState.dados.publicada;
+            appState.dados = novo;
+            appState.matriz.turmaEmMovimentoId = null;
+            mostrarStatusApi("ok");
+            renderizarTudo();
+            const apiEl = document.getElementById("cfg-api-url");
+            if (apiEl) apiEl.textContent = window.SATIC_DATA.baseApi();
+            return true;
+        } catch (err) {
+            mostrarStatusApi("erro", err.message || String(err));
+            return false;
+        }
+    }
+
+    async function recarregarDoServidor() {
+        document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
+        if (contarRascunho(appState.dados) > 0 && !window.confirm("Descartar as alterações não salvas e recarregar do servidor?")) return;
+        try {
+            appState.dados = await window.SATIC_DATA.descartarRascunho(appState.dados);
+            appState.matriz.turmaEmMovimentoId = null;
+            renderizarTudo();
+            mostrarToast("Dados recarregados do servidor.");
+        } catch (err) {
+            tratarErroApi(err);
+        }
+    }
+
+    function tratarErroApi(err) {
+        if (err && err.indisponivel) mostrarStatusApi("erro", err.message);
+        else mostrarToast(`Erro do servidor: ${err && err.message ? err.message : err}`);
+    }
+
+    function atualizarBarraRascunho() {
+        const barra = document.getElementById("draft-bar");
+        if (!barra) return;
+        const n = contarRascunho(appState.dados);
+        const recusas = Object.keys(appState.dados.recusas || {}).length;
+        barra.hidden = n === 0;
+        const contador = document.getElementById("draft-count");
+        if (contador) {
+            contador.innerHTML = `<span class="mono-num">${n}</span> ${n === 1 ? "alteração não salva" : "alterações não salvas"}${recusas ? ` · <span class="text-danger"><span class="mono-num">${recusas}</span> recusada(s)</span>` : ""}`;
+        }
+    }
+
+    async function confirmarTudo() {
+        const n = contarRascunho(appState.dados);
+        if (n === 0) return;
+        try {
+            const r = await window.SATIC_DATA.confirmarRascunho(appState.dados);
+            appState.dados = r.estado;
+            appState.matriz.turmaEmMovimentoId = null;
+            renderizarTudo();
+            if (r.recusados === 0) mostrarToast(`${r.aceitos} alteração(ões) gravada(s) no servidor.`);
+            else {
+                const motivos = r.resultados.filter((x) => !x.sucesso).flatMap((x) => (x.violacoes || []).map((v) => v.regra));
+                mostrarToast(`${r.aceitos} gravada(s), ${r.recusados} recusada(s) pelo servidor (${[...new Set(motivos)].join(", ")}). As recusadas continuam no rascunho.`);
+            }
+        } catch (err) {
+            tratarErroApi(err);
+        }
+    }
+
+    async function resolverViaMotor() {
+        mostrarToast("Consultando o motor do servidor…");
+        try {
+            const r = await window.SATIC_DATA.buscarSugestoes(appState.dados);
+            renderizarTudo();
+            const n = r.plano ? r.plano.mudancas.length : 0;
+            mostrarToast(n ? `Motor: ${Object.keys(r.alternativasPorTurma).length} turma(s) com alternativas · plano com ${n} mudança(s).` : "O motor não encontrou alternativas dentro do limite de busca.");
+        } catch (err) {
+            tratarErroApi(err);
+        }
+    }
+
+    /* ==========================================================================
+       Exportações: ICS (Google Agenda) e PDF (impressão do navegador)
+       ========================================================================== */
+    function lerDatasSemestre() {
+        try {
+            return { inicio: localStorage.getItem("satic.semestre.inicio") || "", fim: localStorage.getItem("satic.semestre.fim") || "" };
+        } catch (_) {
+            return { inicio: "", fim: "" };
+        }
+    }
+
+    function exportarICS() {
+        const { inicio, fim } = lerDatasSemestre();
+        if (!inicio || !fim || fim < inicio) {
+            mostrarToast("Defina o início e o fim das aulas em Configurações para exportar o ICS.");
+            navegarPara("tela-configuracoes");
+            return;
+        }
+        const D = window.SATIC_DATA.dominio();
+        const relogio = Object.fromEntries(D.grade.RELOGIO_AULAS.map((a) => [a.id, a]));
+        const diaIcs = { SEG: "MO", TER: "TU", QUA: "WE", QUI: "TH", SEX: "FR", SAB: "SA" };
+        const offset = { SEG: 0, TER: 1, QUA: 2, QUI: 3, SEX: 4, SAB: 5 };
+        const base = new Date(`${inicio}T00:00:00`);
+        const segunda = new Date(base);
+        segunda.setDate(base.getDate() - ((base.getDay() + 6) % 7)); // segunda da 1ª semana
+        const fmtData = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+        const esc = (s) => String(s).replace(/[\\,;]/g, (c) => `\\${c}`).replace(/\n/g, "\\n");
+        const ate = `${fim.replace(/-/g, "")}T235959`;
+        const linhas = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//SATIC IC UFAL//Grade//PT-BR", "CALSCALE:GREGORIAN",
+            `X-WR-CALNAME:SATIC ${appState.dados.semestre}`, "X-WR-TIMEZONE:America/Maceio"];
+        let eventos = 0;
+        for (const t of appState.dados.turmas) {
+            if (!t.sala || !t.horario) continue;
+            for (const b of D.grade.blocosDoHorario(t.horario)) {
+                const dia = new Date(segunda);
+                dia.setDate(segunda.getDate() + offset[b.dia]);
+                if (dia < base) dia.setDate(dia.getDate() + 7); // primeira ocorrência a partir do início
+                const ini = relogio[`${b.turno}${b.inicio}`].inicio.replace(":", "");
+                const fimAula = relogio[`${b.turno}${b.fim}`].fim.replace(":", "");
+                linhas.push("BEGIN:VEVENT",
+                    `UID:satic-${appState.dados.semestre}-${t.apiId}-${b.dia}-${b.turno}${b.inicio}@ic.ufal`,
+                    `DTSTAMP:${fmtData(new Date())}T000000Z`,
+                    `DTSTART;TZID=America/Maceio:${fmtData(dia)}T${ini}00`,
+                    `DTEND;TZID=America/Maceio:${fmtData(dia)}T${fimAula}00`,
+                    `RRULE:FREQ=WEEKLY;BYDAY=${diaIcs[b.dia]};UNTIL=${ate}`,
+                    `SUMMARY:${esc(`${t.codigo}-${t.turma} ${t.disciplina}`)}`,
+                    `LOCATION:${esc(nomeEspaco(t.sala))}`,
+                    `DESCRIPTION:${esc(`Docentes: ${(t.professores || []).join(", ")}\nCurso: ${t.curso}\nHorário SIGAA: ${t.horario}`)}`,
+                    "END:VEVENT");
+                eventos++;
+            }
+        }
+        linhas.push("END:VCALENDAR");
+        const url = URL.createObjectURL(new Blob([linhas.join("\r\n")], { type: "text/calendar;charset=utf-8" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `satic-${appState.dados.semestre}.ics`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        mostrarToast(`Agenda exportada (${eventos} eventos semanais). Importe no Google Agenda.`);
+    }
+
+    /** PDF pela impressão do navegador ("Salvar como PDF"): imprime a grade como está filtrada. */
+    function imprimirGrade() {
+        navegarPara("tela-matriz");
+        const tela = document.getElementById("tela-matriz");
+        tela.classList.add("print-target");
+        const limpar = () => { tela.classList.remove("print-target"); window.removeEventListener("afterprint", limpar); };
+        window.addEventListener("afterprint", limpar);
+        setTimeout(() => window.print(), 50);
+    }
+
+    function configurarEventosIntegracao() {
+        document.addEventListener("click", (e) => {
+            const draftBtn = e.target.closest("[data-draft-action]");
+            if (draftBtn) {
+                if (draftBtn.getAttribute("data-draft-action") === "confirm") confirmarTudo();
+                else recarregarDoServidor();
+                return;
+            }
+            if (e.target.closest("[data-api-retry]")) {
+                carregarDoServidor();
+                return;
+            }
+            if (e.target.closest("[data-motor-resolver]")) {
+                resolverViaMotor();
+            }
+        });
+
+        const { inicio, fim } = lerDatasSemestre();
+        const inpInicio = document.getElementById("cfg-inicio-semestre");
+        const inpFim = document.getElementById("cfg-fim-semestre");
+        if (inpInicio) inpInicio.value = inicio;
+        if (inpFim) inpFim.value = fim;
+        document.addEventListener("change", (e) => {
+            const chave = e.target.id === "cfg-inicio-semestre" ? "satic.semestre.inicio" : e.target.id === "cfg-fim-semestre" ? "satic.semestre.fim" : null;
+            if (!chave) return;
+            try { localStorage.setItem(chave, e.target.value); } catch (_) { /* sem armazenamento: só nesta página */ }
+        });
+
+        window.addEventListener("beforeunload", (e) => {
+            if (contarRascunho(appState.dados) > 0) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         configurarEventos();
+        configurarEventosIntegracao();
         renderizarTudo();
+        carregarDoServidor();
     });
 })();

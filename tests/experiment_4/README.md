@@ -1,56 +1,99 @@
-# SATIC — correção e estabilização
+# SATIC — interface ligada à API
 
-Frontend em HTML, CSS e JavaScript, com dados de demonstração na sessão do navegador.
+Front-end em HTML, CSS e JavaScript puro. Desde 19/11/2026 os dados vêm da **API do SATIC-back** (branch `ts-back-dev`), e as regras de alocação são **as mesmas do servidor**: o parser SIGAA, o modelo de grade e o validador são carregados da própria API (`/shared/*.js`).
+
+As decisões estão em `SATIC-back/docs/modelo-aulas-e-motor-de-sugestoes.md`, e o contrato da API em `SATIC-back/docs/api-contratos-frontend.md`.
 
 ## Executar
 
+Em um terminal, suba o back-end com o banco local (sem Docker):
+
 ```powershell
+cd SATIC-back\ts
+npm install
+npm run local
+```
+
+Na primeira vez, gere as alocações iniciais (opcional, o "Gerar grade" também funciona):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost:3001/api/alocacoes/gerar -ContentType application/json -Body '{}'
+```
+
+Em outro terminal, sirva o front:
+
+```powershell
+cd SATIC-front\tests\experiment_4
 node tools/serve.cjs
 ```
 
-Abra http://127.0.0.1:8040/.
+Abra http://127.0.0.1:8040/. Para usar outra API: http://127.0.0.1:8040/?api=http://endereço:porta (fica lembrado no navegador).
 
-## Testar regras de alocação
+Se a API ou o banco estiverem fora do ar, a tela mostra **"Servidor indisponível"** com **"Tentar de novo"**. Não existe modo de demonstração.
+
+## Testar
 
 ```powershell
 node --test tests/data.test.cjs
 ```
 
-Os quatro testes verificam geração com as três prioridades, preservação das alocações válidas e dos encontros semanais, indisponibilidade docente, manutenção, ambiente exigido e proposta parcial quando faltam espaços.
+Os testes carregam `js/data.js` como o navegador faria e usam os módulos de regra **direto do repositório SATIC-back** (o Node 22.18+ roda `.ts`). Por padrão o caminho é `../../../../SATIC-back/ts`, com os dois repositórios lado a lado; para outro lugar, use `SATIC_BACK_TS`. Os dados são a oferta real 2026.2 alocada pelo motor. São 9 testes:
+- grade em aulas de 50 min;
+- adaptação das 88 turmas sem conflito;
+- mover um bloco;
+- bloqueios de dia repetido, turno e espaço;
+- RN-01 provocada;
+- rascunho;
+- sala mantida ou sugerida;
+- espaço em manutenção;
+- carga docente.
 
-## Diagnóstico e correções
+## Como a grade funciona agora
 
-- HTML e CSS usavam nomes diferentes para sidebar, workspace, cabeçalhos, fila, grade, filtros e painéis. Isso deixava elementos sem layout e SVGs com dimensões intrínsecas. Os seletores foram reconciliados e os ícones compartilham uma classe com tamanho explícito.
-- A tabela de professores mostrava SIAPE, regime e quantidade de turmas sob cabeçalhos de outras propriedades. Os cabeçalhos correspondem agora aos dados reais, sem criar um campo de área.
-- Filtros de espaços/docentes continham opções antigas e o status regular usava um valor diferente do controlador. Os filtros seguem o modelo atual, incluindo novos espaços.
-- Wrappers sem layout deixavam drawers abaixo das tabelas. Todos os drawers usam o mesmo componente lateral; professores reservam espaço para a tabela. Fechamento, Escape e seleção continuam disponíveis.
-- A grade usa CSS Grid por linha, com seis colunas compartilhadas: horário e cinco dias. Eventos ficam dentro das células, texto quebra naturalmente e as ocorrências semanais selecionam a mesma entidade.
-- A fila tem 224px; a instrução contextual aparece apenas durante alocação. Clique, teclado e arrastar/soltar mantêm o número de encontros. A origem do drag não é mais substituída durante o gesto.
-- A disponibilidade usa estados curtos, tooltips e detalhe selecionável para horários ocupados. A carga considera o número de encontros, incluindo turmas com um único encontro.
-- A validação considera indisponibilidade docente, manutenção, capacidade, ambiente e encontros. Alternativas de resolução são verificadas antes de serem oferecidas.
-- A geração anterior aplicava posições fixas e mostrava contadores inventados. A geração atual procura uma proposta local com limite de 10.000 tentativas, mantém alocações válidas e informa resultados completos ou parciais. As prioridades são heurísticas, sem garantia de ótimo global.
-- A publicação é bloqueada enquanto houver conflitos ou pendências e perde o estado de publicada após alteração dos dados.
-- Percentuais de ocupação usam os 30 horários semanais e contam cada interseção apenas uma vez.
-- Estados vazios, foco, atalhos, navegação e proporções são compartilhados. Configurações mostra informações da sessão e permite restaurar a demonstração.
-- CSV produz um arquivo real com as 18 turmas. Os comandos PDF/XLSX continuam presentes e informam explicitamente que a exportação ainda não foi implementada.
+- **Aulas de 50 min.** A grade tem uma linha por aula (M1–M6, T1–T6, N1–N4) e colunas de SEG a SAB. O card completo aparece na primeira aula de cada bloco, e as aulas seguintes mostram uma faixa de continuação. O turno "Noite" mostra as turmas de IA.
+- **Horário em blocos.** "TER/QUI M3–M4", "SEX M3–M6" e "SEG T5–T6 · SEX T1–T2" são montados a partir do código SIGAA (`35M34`, `6M3456`, `2T56 6T12`).
+- **Mover.**
+  - Selecione o card do dia que quer mover, clique em "Mover na grade" (ou arraste) e clique no destino.
+  - O bloco daquele dia vai inteiro, com o mesmo número de aulas.
+  - Destinos inválidos mostram o motivo: "Já tem aula nesse dia", "Não cabe", "Choque docente", "Turno fora do curso", "Sem sala livre".
+  - A sala atual é mantida se continuar livre. Se não, o sistema sugere a melhor sala livre, com o mesmo critério do motor.
+- **Rascunho.**
+  - Toda mudança vai para o rascunho, mostrado no aviso flutuante "N alterações não salvas" com **Confirmar tudo** e **Descartar**.
+  - O servidor valida o estado final do lote, então trocas entre turmas funcionam.
+  - As mudanças recusadas continuam no rascunho, marcadas como recusadas. Sair da página com alterações pendentes pede confirmação.
+- **Editar.** O painel da turma aceita o horário na notação SIGAA e a sala.
+- **Conflitos.**
+  - A lista é calculada com o validador do servidor.
+  - **Resolver via motor** pede sugestões de horário e sala ao servidor, já levando em conta o rascunho. Cada alternativa mostra o custo (trocas de sala e mudanças de horário).
+  - "Aplicar alternativa" coloca a sugestão no rascunho.
+- **Gerar grade** consolida: o servidor verifica os conflitos, o motor propõe um plano, e "Colocar no rascunho" aplica o plano para revisão.
+- **Exportar:**
+  - CSV com os dados reais;
+  - **ICS** com eventos semanais por bloco até o fim das aulas (defina início e fim em Configurações);
+  - **PDF** pela impressão do navegador ("Salvar como PDF").
+  - XLSX continua sem implementação.
+- **Cursos:** CC e EC (manhã e tarde) e IA (noite). Turmas conjuntas ("CC, EC") aparecem nos dois filtros. O filtro de período fica vazio, porque o back ainda não tem o período das disciplinas.
 
-## Verificação no navegador
+## Funções que ficam só no navegador
 
-Inspeção inicial e testes posteriores realizados no Edge, por fases, incluindo:
+O back-end ainda não guarda estas informações. Elas funcionam na sessão, e as rotas estão reservadas como comentário nos routers do SATIC-back:
+- status "Manutenção" e cadastro ou edição de espaços (equipamentos, PCs);
+- disponibilidade "preferencial" e regime ou carga máxima dos docentes;
+- edição de turma e troca de docentes;
+- publicar a grade;
+- prioridades do gerador ("agrupar horários", "preferências"), que o motor ainda não usa;
+- as datas do semestre usadas no ICS, guardadas no `localStorage` deste navegador.
 
-- Todas as telas em 1366×768 e 1440×900, sem overflow horizontal inesperado ou rolagem da sidebar.
-- Cinco dias e seis slots alinhados; nenhum evento fora da célula; acesso aos últimos slots pela rolagem.
-- Filtros individuais e combinados, busca e estados vazios.
-- Seleção, edição e fechamento dos drawers de turmas, professores, espaços e grade.
-- Alteração de disponibilidade, inspeção de horários ocupados e atualização dos conflitos.
-- Alocação por clique e drag, cancelamento por Escape e seleção conjunta dos dois encontros.
-- Criação de espaço, atualização do contador e inclusão nos filtros.
-- Alternativas de resolução, geração, aplicação, bloqueio de publicação com pendências e invalidação após edição.
-- Busca por comandos, navegação por teclado e exportação CSV. O arquivo baixado foi inspecionado: 18 registros.
-- Console e sintaxe dos três arquivos JavaScript. Nenhum erro de execução da aplicação foi observado. A aba de testes acumulou mensagens de canal assíncrono do navegador, sem referência aos arquivos da aplicação; uma nova aba iniciou com console vazio.
+## Verificado no navegador (19/11/2026)
 
-Medições e screenshots estão em `artifacts/`, incluindo `layout-audit.json`.
+Com a API local (`npm run local`) e a base real 2026.2:
+- Carga das 88 turmas, todas alocadas e sem conflitos. A grade em aulas de 50 min aparece com sábado e noite, e a co-docência como "Alan Silva +3".
+- Mover o bloco de terça da ECOM017 para quarta M1. A sexta ficou bloqueada ("Já tem aula nesse dia"), a sala foi sugerida (Sala 03 IC), e "Confirmar tudo" gravou a mudança como `DEFINITIVA`.
+- Choque de sala criado pelo formulário: o servidor recusou (409) e a mudança ficou no rascunho. "Resolver via motor" sugeriu 3 trocas de sala, e a primeira mais "Confirmar tudo" gravou a troca das duas turmas, com zero conflitos no servidor.
+- As telas Turmas, Professores e Espaços com os dados reais, e o aviso "Servidor indisponível" com a API desligada.
 
-## Limites existentes
+## Limitações conhecidas
 
-Não há backend ou persistência: recarregar restaura os dados de demonstração; publicação é um estado local. PDF e XLSX não possuem implementação nesta versão. A geração local respeita as regras presentes no modelo e não representa um motor acadêmico completo. Os conflitos e as três turmas pendentes iniciais são dados de demonstração que podem ser resolvidos pela interface.
+- O arrasto move o bloco de um dia por vez. A seleção em área de várias aulas, combinada com a equipe, ainda não foi feita.
+- O Painel Geral e as telas de professores e espaços foram adaptadas, mas não refeitas para o novo modelo, e algumas contagens (ocupação por espaço) ainda usam o total de 96 aulas semanais por sala.
+- A aba de testes do Edge citada na versão anterior e os artefatos em `artifacts/` são da versão com dados de demonstração.
