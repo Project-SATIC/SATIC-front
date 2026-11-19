@@ -1608,9 +1608,19 @@ section[aria-labelledby="sec-periodos-heading"] .compact-metric-row {
 .main-workspace { position: relative; }
 
 @media print {
-    .topbar, .app-sidebar, .sidebar, .screen-toolbar, .matrix-unallocated-panel, .drawer, .draft-bar, .toast { display: none !important; }
+    html, body, .app-shell, .main-workspace, .view-screen.print-target, .matrix-workspace, .schedule-stage, .schedule-scroll {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+    .app-topbar, .grade-toolbar, .screen-toolbar, .unallocated-panel, .context-drawer, .draft-bar, .status-toast, .modal-backdrop, .api-status {
+        display: none !important;
+    }
     .view-screen { display: none !important; }
-    .view-screen.print-target { display: block !important; }
-    .schedule-table, .schedule-table * { font-size: 9pt; }
+    .view-screen.print-target { display: block !important; padding: 0 !important; }
+    .schedule-stage { border: none !important; }
+    .schedule-grid, .schedule-grid * { font-size: 8.5pt; }
+    .schedule-grid tr { break-inside: avoid; }
     .event-block { break-inside: avoid; border: 1px solid #999; }
 }

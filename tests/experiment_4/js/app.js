@@ -7,6 +7,7 @@
 (function () {
     const { SLOTS_INSTITUCIONAIS, DIAS_SEMANA, criarDadosIniciais, inspecionarTurma, obterConflitosConsolidados, verificarViabilidadeSlot,
         ocupa, blocoDoDia, moverTurma, contarRascunho } = window.SATIC_DATA;
+    const HELPERS = window.SATIC_HELPERS;
     const ICONS = window.SATIC_ICONS;
 
     const appState = {
@@ -45,7 +46,6 @@
             busca: "",
             curso: "todos",
             periodo: "todos",
-            professor: "todos",
             status: "todos",
             ambiente: "todos",
             filtrosAbertos: false,
@@ -63,6 +63,9 @@
 
     let toastTimer = null;
     let assinaturaPublicada = null;
+    let geracaoSeq = 0;
+    let confirmandoRascunho = false;
+    let consultandoMotor = false;
 
     function cursosDe(t) {
         return String(t.curso || "").split(",").map((c) => c.trim()).filter(Boolean);
@@ -75,21 +78,12 @@
         return ids.length === 1 ? ids[0] : `${ids[0]} +${ids.length - 1}`;
     }
 
-    /** Horário legível em blocos: "TER/QUI M3–M4", "SEX M3–M6", "SEG T5–T6 · SEX T1–T2". */
     function rotuloHorario(t) {
-        const D = window.SATIC_DATA.dominio();
-        if (!t || !t.horario || !D) return "Sem horário";
-        const blocos = D.grade.blocosDoHorario(t.horario);
-        const grupos = new Map();
-        blocos.forEach((b) => {
-            const faixa = b.inicio === b.fim ? `${b.turno}${b.inicio}` : `${b.turno}${b.inicio}–${b.turno}${b.fim}`;
-            grupos.set(faixa, [...(grupos.get(faixa) || []), b.dia]);
-        });
-        return [...grupos.entries()].map(([faixa, dias]) => `${dias.join("/")} ${faixa}`).join(" · ");
+        return HELPERS.rotuloHorario(t, window.SATIC_DATA.dominio());
     }
 
     function escapar(valor) {
-        return String(valor ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+        return HELPERS.escapar(valor);
     }
 
     function nomeEspaco(id) {
@@ -109,7 +103,13 @@
     }
 
     function assinaturaDados() {
-        return JSON.stringify([appState.dados.turmas, appState.dados.espacos, appState.dados.professores]);
+        const { turmas, espacos, professores, semestre } = appState.dados;
+        return `${semestre}#`
+            + turmas.map((t) => `${t.id}|${t.sala}|${t.horario}|${t.disciplina}|${t.alunos}|${t.ambienteExigido}|${(t.professores || []).join(",")}`).join(";")
+            + "#"
+            + espacos.map((e) => `${e.id}|${e.nome}|${e.codigo}|${e.tipo}|${e.capacidade}|${e.pcs}|${e.status}|${(e.equipamentos || []).join(",")}`).join(";")
+            + "#"
+            + professores.map((p) => `${p.id}:${Object.entries(p.disponibilidade || {}).filter(([, v]) => v && v !== "disponivel").map(([k, v]) => `${k}=${v}`).sort().join(",")}`).join(";");
     }
 
     function atualizarOpcoesFiltro(id, itens, valor) {
@@ -143,7 +143,11 @@
 
     function navegarPara(idTela, opcoes = {}) {
         if (!document.getElementById(idTela)?.classList.contains("view-screen")) return;
-        if (idTela !== appState.telaAtiva) appState.matriz.turmaEmMovimentoId = null;
+        if (idTela !== appState.telaAtiva) {
+            appState.matriz.turmaEmMovimentoId = null;
+            appState.matriz.diaSelecionado = null;
+            appState.dados.movimento = null;
+        }
         appState.matriz.filtrosAbertos = false;
         appState.turmas.filtrosAbertos = false;
         document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
@@ -175,14 +179,18 @@
 
         if (opcoes.selecionarTurmaMatriz) {
             appState.matriz.turmaSelecionadaId = opcoes.selecionarTurmaMatriz;
+            appState.matriz.diaSelecionado = null;
             appState.matriz.modoEdicaoDrawer = false;
+            appState.dados.movimento = null;
         }
 
         if (opcoes.iniciarAlocacaoTurma) {
             appState.matriz.painelPendentesRecolhido = false;
             appState.matriz.turmaSelecionadaId = opcoes.iniciarAlocacaoTurma;
             appState.matriz.turmaEmMovimentoId = opcoes.iniciarAlocacaoTurma;
+            appState.matriz.diaSelecionado = null;
             appState.matriz.modoEdicaoDrawer = false;
+            appState.dados.movimento = { turmaId: opcoes.iniciarAlocacaoTurma, diaOrigem: null };
         }
 
         if (opcoes.selecionarConflito) {
@@ -221,7 +229,7 @@
         const alocadas = todasTurmas.filter((t) => Boolean(t.sala && t.slot));
         const pendentes = todasTurmas.filter((t) => !t.sala || !t.slot);
         const conflitos = obterConflitosConsolidados(appState.dados);
-        const percentual = Math.round((alocadas.length / todasTurmas.length) * 100);
+        const percentual = todasTurmas.length ? Math.round((alocadas.length / todasTurmas.length) * 100) : 0;
 
         const itensPrioritarios = [
             ...conflitos.map((c) => {
@@ -254,7 +262,8 @@
             alocadas.forEach((t) => {
                 if (t.sala === esp.id) (t.aulas || []).forEach((a) => slotsUsados.add(a));
             });
-            const taxa = Math.min(100, Math.round((slotsUsados.size / (SLOTS_INSTITUCIONAIS.length * DIAS_SEMANA.length)) * 100));
+            const totalSlots = SLOTS_INSTITUCIONAIS.length * DIAS_SEMANA.length;
+            const taxa = totalSlots ? Math.min(100, Math.round((slotsUsados.size / totalSlots) * 100)) : 0;
             return {
                 id: esp.id,
                 nome: esp.nome,
@@ -401,51 +410,7 @@
     }
 
     function obterRotuloConflito(turma, diag) {
-        const prioridades = {
-            Professor: 1,
-            Disponibilidade: 2,
-            Ambiente: 3,
-            Capacidade: 4,
-            Sala: 5,
-            Espaço: 6,
-            Encontros: 7
-        };
-        const itens = diag.problemas.map((p) => {
-            if (p.categoria === "Professor") {
-                return { prio: prioridades.Professor, rn: "RN-01", curtoHtml: "Choque docente", texto: "Choque docente" };
-            }
-            if (p.categoria === "Disponibilidade") {
-                return { prio: prioridades.Disponibilidade, rn: "RN-02", curtoHtml: "Indisponível", texto: "Indisponível" };
-            }
-            if (p.categoria === "Ambiente") {
-                const rot = turma.ambienteExigido === "Laboratório" ? "Exige lab" : "Exige auditório";
-                return { prio: prioridades.Ambiente, rn: "RN-04", curtoHtml: rot, texto: rot };
-            }
-            if (p.categoria === "Capacidade") {
-                const esp = appState.dados.espacos.find((e) => e.id === turma.sala);
-                const cap = esp ? esp.capacidade : 0;
-                return {
-                    prio: prioridades.Capacidade,
-                    rn: "RN-03",
-                    curtoHtml: `Lotação <span class="mono-num">${turma.alunos}/${cap}</span>`,
-                    texto: `Lotação ${turma.alunos}/${cap}`
-                };
-            }
-            if (p.categoria === "Sala") {
-                return { prio: prioridades.Sala, rn: "Sala", curtoHtml: "Choque sala", texto: "Choque sala" };
-            }
-            if (p.categoria === "Espaço") {
-                return { prio: prioridades.Espaço, rn: "Espaço", curtoHtml: "Sala indisponível", texto: "Sala indisponível" };
-            }
-            return { prio: prioridades.Encontros, rn: "Encontros", curtoHtml: "Encontros", texto: "Encontros incompletos" };
-        });
-        itens.sort((a, b) => a.prio - b.prio);
-        const principal = itens[0];
-        const extra = itens.length > 1 ? ` <span class="mono-num">+${itens.length - 1}</span>` : "";
-        return {
-            curtoHtml: `${principal.curtoHtml}${extra}`,
-            resumoTooltip: itens.map((i) => `${i.rn}: ${i.texto}`).join(" · ")
-        };
+        return HELPERS.obterRotuloConflito(turma, diag, appState.dados.espacos);
     }
 
     function formatarMotivoBloqueio(viabilidade, turma) {
@@ -465,16 +430,7 @@
     }
 
     function rotuloRegraProblema(categoria) {
-        const mapa = {
-            Professor: "RN-01 · Choque docente",
-            Disponibilidade: "RN-02 · Indisponibilidade docente",
-            Capacidade: "RN-03 · Capacidade física",
-            Ambiente: "RN-04 · Adequação de ambiente",
-            Sala: "Exclusividade de sala",
-            Espaço: "Espaço indisponível",
-            Encontros: "Encontros semanais"
-        };
-        return mapa[categoria] || categoria;
+        return HELPERS.rotuloRegraProblema(categoria);
     }
 
     function renderizarChipsFiltrosMatriz() {
@@ -561,11 +517,12 @@
         const termoBusca = appState.matriz.busca.trim().toLowerCase();
         const passaBusca = (t) => {
             if (!termoBusca) return true;
+            const docentes = (t.professores && t.professores.length ? t.professores : [t.professor])
+                .flatMap((id) => [id, nomeCompletoProfessor(id)]);
             const campos = [
                 t.codigo,
                 t.disciplina,
-                t.professor,
-                nomeCompletoProfessor(t.professor),
+                ...docentes,
                 t.sala || "",
                 t.sala ? nomeEspaco(t.sala) : "",
                 t.curso,
@@ -833,7 +790,7 @@
             footerEl.innerHTML = `
                 <button type="button" class="btn btn-ghost" data-matrix-drawer-action="cancel-edit">Cancelar</button>
                 <div class="flex-row-gap-sm">
-                    ${turma.sala ? `<button type="button" class="btn btn-danger" data-matrix-drawer-action="unassign">Desalocar</button>` : ""}
+                    ${turma.sala && turma.status !== "EXTERNA_FIXA" ? `<button type="button" class="btn btn-danger" data-matrix-drawer-action="unassign">Desalocar</button>` : ""}
                     <button type="button" class="btn btn-primary" data-matrix-drawer-action="save-edit">Salvar</button>
                 </div>
             `;
@@ -1148,16 +1105,16 @@
                 const isSelected = e.id === espacoSelecionadoId;
                 const pillClass = e.status === "Disponível" ? "is-valid" : e.status === "Manutenção" ? "is-pending" : "is-conflict";
                 return `
-                <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-espaco="${e.id}">
+                <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-espaco="${escapar(e.id)}">
                     <td>
                         <div class="cell-primary">${escapar(e.nome)}</div>
                         <div class="cell-mono">${escapar(e.codigo)}</div>
                     </td>
-                    <td>${e.tipo}</td>
+                    <td>${escapar(e.tipo)}</td>
                     <td><span class="mono-num">${e.capacidade}</span> lug.</td>
                     <td class="cell-muted">${escapar(e.equipamentos.join(", "))}</td>
                     <td>
-                        <span class="status-pill ${pillClass}">${e.status}</span>
+                        <span class="status-pill ${pillClass}">${escapar(e.status)}</span>
                     </td>
                 </tr>`;
             })
@@ -1206,7 +1163,7 @@
 
         drawer.classList.add("is-open");
         titleEl.textContent = esp.nome;
-        subEl.textContent = `${escapar(esp.codigo)} · ${esp.tipo}`;
+        subEl.textContent = `${esp.codigo} · ${esp.tipo}`;
 
         if (appState.espacos.modoEdicao) {
             body.innerHTML = montarFormularioEspaco(esp);
@@ -1229,7 +1186,7 @@
                     <span class="detail-label">Código</span>
                     <span class="detail-value cell-mono">${escapar(esp.codigo)}</span>
                     <span class="detail-label">Tipo</span>
-                    <span class="detail-value">${esp.tipo}</span>
+                    <span class="detail-value">${escapar(esp.tipo)}</span>
                 </div>
             </div>
 
@@ -1245,12 +1202,12 @@
 
             <div class="detail-section">
                 <span class="detail-section-title">Equipamentos</span>
-                <div class="cell-muted">${esp.equipamentos.join(" · ") || "Nenhum recurso listado"}</div>
+                <div class="cell-muted">${esp.equipamentos.map(escapar).join(" · ") || "Nenhum recurso listado"}</div>
             </div>
 
             <div class="detail-section">
                 <span class="detail-section-title">Status operacional</span>
-                <div><span class="status-pill ${pillClass}">${esp.status}</span></div>
+                <div><span class="status-pill ${pillClass}">${escapar(esp.status)}</span></div>
                 <div class="cell-muted">${escapar(esp.observacao)}</div>
             </div>
 
@@ -1383,7 +1340,7 @@
             btn.setAttribute("aria-pressed", String(ativo));
         });
 
-        const { busca, curso, periodo, professor, status, ambiente, turmaSelecionadaId } = appState.turmas;
+        const { busca, curso, periodo, status, ambiente, turmaSelecionadaId } = appState.turmas;
         const selCurso = document.getElementById("turmas-filter-curso");
         const selPeriodo = document.getElementById("turmas-filter-periodo");
         const selAmb = document.getElementById("turmas-filter-ambiente");
@@ -1398,20 +1355,20 @@
         const filtradas = appState.dados.turmas.filter((t) => {
             const diag = inspecionarTurma(appState.dados, t);
             const estadoTurma = !diag.alocada ? "pendente" : diag.problemas.length > 0 ? "conflito" : "alocada";
+            const docentes = (t.professores && t.professores.length ? t.professores : [t.professor])
+                .flatMap((id) => [id, nomeCompletoProfessor(id)]);
 
             const bateBusca =
                 !termo ||
                 t.codigo.toLowerCase().includes(termo) ||
                 t.disciplina.toLowerCase().includes(termo) ||
-                t.professor.toLowerCase().includes(termo) ||
-                nomeCompletoProfessor(t.professor).toLowerCase().includes(termo);
+                docentes.some((d) => String(d).toLowerCase().includes(termo));
             const bateCurso = curso === "todos" || cursosDe(t).includes(curso);
             const batePeriodo = periodo === "todos" || t.periodo === periodo;
-            const bateProf = professor === "todos" || (t.professores || []).includes(professor);
             const bateStatus = status === "todos" || estadoTurma === status;
             const bateAmb = ambiente === "todos" || t.ambienteExigido === ambiente;
 
-            return bateBusca && bateCurso && batePeriodo && bateProf && bateStatus && bateAmb;
+            return bateBusca && bateCurso && batePeriodo && bateStatus && bateAmb;
         });
 
         if (countEl) countEl.textContent = filtradas.length;
@@ -1434,13 +1391,13 @@
                         ? `<span class="event-tag-lab">LAB</span>`
                         : t.ambienteExigido === "Auditório"
                         ? `<span class="unallocated-tag">AUD</span>`
-                        : `<span class="cell-muted">${t.ambienteExigido}</span>`;
+                        : `<span class="cell-muted">${escapar(t.ambienteExigido)}</span>`;
 
                 return `
-                <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-turma="${t.id}">
-                    <td class="cell-mono">${t.codigo}</td>
+                <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-turma="${escapar(t.id)}">
+                    <td class="cell-mono">${escapar(t.codigo)}</td>
                     <td class="cell-primary">${escapar(t.disciplina)}</td>
-                    <td class="mono-num">${t.turma}</td>
+                    <td class="mono-num">${escapar(t.turma)}</td>
                     <td class="cell-muted">${escapar(t.curso)}</td>
                     <td>${escapar(rotuloDocentes(t))}</td>
                     <td class="mono-num">${t.alunos}</td>
@@ -1476,7 +1433,7 @@
 
         if (appState.turmas.modoEdicao) {
             const profOptions = appState.dados.professores
-                .map((p) => `<option value="${p.id}" ${turma.professor === p.id ? "selected" : ""}>${escapar(p.nome)}</option>`)
+                .map((p) => `<option value="${escapar(p.id)}" ${turma.professor === p.id ? "selected" : ""}>${escapar(p.nome)}</option>`)
                 .join("");
 
             body.innerHTML = `
@@ -1518,7 +1475,7 @@
                 <span class="detail-section-title">Oferta</span>
                 <div class="detail-grid">
                     <span class="detail-label">Código</span>
-                    <span class="detail-value cell-mono">${turma.codigo}</span>
+                    <span class="detail-value cell-mono">${escapar(turma.codigo)}</span>
                     <span class="detail-label">Curso</span>
                     <span class="detail-value">${escapar(turma.curso)}</span>
                     <span class="detail-label">Professor</span>
@@ -1526,7 +1483,7 @@
                     <span class="detail-label">Estudantes</span>
                     <span class="detail-value"><span class="mono-num">${turma.alunos}</span> matriculados</span>
                     <span class="detail-label">Ambiente</span>
-                    <span class="detail-value">${turma.ambienteExigido}</span>
+                    <span class="detail-value">${escapar(turma.ambienteExigido)}</span>
                 </div>
             </div>
 
@@ -1590,7 +1547,7 @@
             const temConflito = turmasProf.some((t) => inspecionarTurma(appState.dados, t).problemas.some((pr) => pr.tipo === "docente"));
             const estado = temConflito ? "conflito" : "regular";
 
-            const bateBusca = !termo || p.nome.toLowerCase().includes(termo) || p.siape.includes(termo);
+            const bateBusca = HELPERS.filtrarProfessorPorTermo(p, termo);
             const bateStatus = status === "todos" || estado === status;
             return bateBusca && bateStatus;
         });
@@ -1617,10 +1574,10 @@
                     : `<span class="status-pill is-valid">Regular</span>`;
 
                 return `
-                <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-professor="${p.id}">
+                <tr tabindex="0" aria-selected="${isSelected}" class="is-interactive ${isSelected ? "is-selected" : ""}" data-row-professor="${escapar(p.id)}">
                     <td class="cell-primary">${escapar(p.nome)}</td>
-                    <td class="cell-mono">${p.siape}</td>
-                    <td class="cell-muted">${p.regime}</td>
+                    <td class="cell-mono">${escapar(p.siape)}</td>
+                    <td class="cell-muted">${escapar(p.regime)}</td>
                     <td class="mono-num">${carga} aulas/sem</td>
                     <td class="mono-num">${turmasProf.length}</td>
                     <td>${statusBadge}</td>
@@ -1641,10 +1598,10 @@
         const aulas = turmas.filter((t) => t.sala && ocupa(t, dia, slot));
         if (!aulas.length) return '';
         return `<div class="detail-section availability-detail">
-            <span class="detail-section-title">${dia} · ${slot}</span>
-            ${aulas.map((t) => `<div>${escapar(t.disciplina)} · <span class="cell-mono">${t.codigo}</span></div>`).join('')}
-            <div class="flex-row-between"><span class="cell-muted">Disponibilidade: ${prof.disponibilidade[chave] || 'disponivel'}</span>
-            <button type="button" class="btn btn-secondary" data-toggle-prof-avail="${prof.id}" data-avail-key="${chave}">Alternar</button></div>
+            <span class="detail-section-title">${escapar(dia)} · ${escapar(slot)}</span>
+            ${aulas.map((t) => `<div>${escapar(t.disciplina)} · <span class="cell-mono">${escapar(t.codigo)}</span></div>`).join('')}
+            <div class="flex-row-between"><span class="cell-muted">Disponibilidade: ${escapar(prof.disponibilidade[chave] || 'disponivel')}</span>
+            <button type="button" class="btn btn-secondary" data-toggle-prof-avail="${escapar(prof.id)}" data-avail-key="${escapar(chave)}">Alternar</button></div>
             </div>`;
     }
 
@@ -1696,10 +1653,10 @@
                 <td>
                     <button
                         type="button"
-                        class="avail-cell-btn ${classeEstado}" data-inspect-prof-avail="${aulasSlot.length ? chave : ''}"
-                        data-toggle-prof-avail="${prof.id}"
-                        data-avail-key="${chave}"
-                        title="${aulasSlot.length ? aulasSlot.map((a) => escapar(a.disciplina) + ' · ' + a.codigo).join('; ') : 'Alternar disponibilidade'} · ${dia.nome} ${slot.id}" aria-label="${dia.nome} ${slot.id}: ${rotulo}"
+                        class="avail-cell-btn ${classeEstado}" data-inspect-prof-avail="${aulasSlot.length ? escapar(chave) : ''}"
+                        data-toggle-prof-avail="${escapar(prof.id)}"
+                        data-avail-key="${escapar(chave)}"
+                        title="${escapar(aulasSlot.length ? aulasSlot.map((a) => `${a.disciplina} · ${a.codigo}`).join('; ') : 'Alternar disponibilidade')} · ${escapar(dia.nome)} ${escapar(slot.id)}" aria-label="${escapar(dia.nome)} ${escapar(slot.id)}: ${rotulo}"
                     >
                         ${rotulo}
                     </button>
@@ -1729,6 +1686,7 @@
                             <th scope="col">QUA</th>
                             <th scope="col">QUI</th>
                             <th scope="col">SEX</th>
+                            <th scope="col">SAB</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1766,6 +1724,7 @@
     let prioridadeGerador = "janelas";
 
     function abrirModalGerarGrade() {
+        geracaoSeq++;
         resultadoGerador = null;
         document.getElementById("modal-gerar-grade").classList.add("is-open");
         renderizarEtapaGerador("config");
@@ -1773,6 +1732,7 @@
     }
 
     function fecharModalGerarGrade() {
+        geracaoSeq++;
         document.getElementById("modal-gerar-grade").classList.remove("is-open");
         resultadoGerador = null;
         restaurarFocoModal();
@@ -1803,13 +1763,16 @@
                 </div>`;
             footer.innerHTML = `<button type="button" class="btn btn-ghost" data-gen-action="close">Cancelar</button><button type="button" class="btn btn-primary" data-gen-action="start">Gerar grade</button>`;
         } else if (etapa === "running") {
+            const seq = ++geracaoSeq;
             prioridadeGerador = document.querySelector('input[name="opt-prio"]:checked')?.value || prioridadeGerador;
             body.innerHTML = `<p class="cell-muted">Consultando o motor do servidor…</p>`;
             footer.innerHTML = "";
             window.SATIC_DATA.gerarPropostaGrade(appState.dados).then((r) => {
+                if (seq !== geracaoSeq || !document.getElementById("modal-gerar-grade")?.classList.contains("is-open")) return;
                 resultadoGerador = r;
                 renderizarEtapaGerador("done");
             }).catch((err) => {
+                if (seq !== geracaoSeq || !document.getElementById("modal-gerar-grade")?.classList.contains("is-open")) return;
                 body.innerHTML = `<p class="text-danger">${escapar(err.message)}</p>`;
                 footer.innerHTML = `<button type="button" class="btn btn-ghost" data-gen-action="close">Fechar</button>`;
             });
@@ -1870,12 +1833,12 @@
             { id: "nav:tela-painel", titulo: "Ir para Visão Geral do Semestre", tituloHtml: "Ir para Visão Geral do Semestre", meta: "Tela" },
             { id: "nav:tela-conflitos", titulo: "Abrir Central de Conflitos e Publicação", tituloHtml: "Abrir Central de Conflitos e Publicação", meta: "Tela" },
             { id: "action:gerar-grade", titulo: "Gerar grade automaticamente", tituloHtml: "Gerar grade automaticamente", meta: "Automação" },
-            { id: "action:reset-demo", titulo: "Restaurar estado inicial de demonstração", tituloHtml: "Restaurar estado inicial de demonstração", meta: "Sistema" },
+            { id: "action:reload-server", titulo: "Recarregar dados do servidor", tituloHtml: "Recarregar dados do servidor", meta: "Sistema" },
             ...appState.dados.turmas.map((t) => ({
                 id: `turma:${t.id}`,
                 titulo: `${t.codigo} · ${t.disciplina} (${t.professor})`,
-                tituloHtml: `<span class="mono-num">${t.codigo}</span> · ${escapar(t.disciplina)} (${escapar(rotuloDocentes(t))})`,
-                meta: t.sala ? `${escapar(nomeEspaco(t.sala))} · ${rotuloHorario(t)}` : "Não alocada"
+                tituloHtml: `<span class="mono-num">${escapar(t.codigo)}</span> · ${escapar(t.disciplina)} (${escapar(rotuloDocentes(t))})`,
+                meta: t.sala ? `${nomeEspaco(t.sala)} · ${rotuloHorario(t)}` : "Não alocada"
             }))
         ];
 
@@ -1887,11 +1850,11 @@
             .slice(0, 10)
             .map(
                 (c) => `
-            <button type="button" class="cmd-item" data-cmd-exec="${c.id}">
+            <button type="button" class="cmd-item" data-cmd-exec="${escapar(c.id)}">
                 <span class="cmd-item-left">
                     <span>${c.tituloHtml}</span>
                 </span>
-                <span class="cmd-shortcut">${c.meta}</span>
+                <span class="cmd-shortcut">${escapar(c.meta)}</span>
             </button>`
             )
             .join("");
@@ -1904,18 +1867,33 @@
         atualizarBarraRascunho();
         if (appState.dados.publicada && assinaturaPublicada !== assinaturaDados()) appState.dados.publicada = false;
         atualizarBadgesNavegacao();
-        renderizarPainelGeral();
-        renderizarMatriz();
-        renderizarConflitosEPublicacao();
-        renderizarEspacos();
-        renderizarTurmas();
-        renderizarProfessores();
+        switch (appState.telaAtiva) {
+            case "tela-painel":
+                renderizarPainelGeral();
+                break;
+            case "tela-matriz":
+                renderizarMatriz();
+                break;
+            case "tela-conflitos":
+                renderizarConflitosEPublicacao();
+                break;
+            case "tela-espacos":
+                renderizarEspacos();
+                break;
+            case "tela-turmas":
+                renderizarTurmas();
+                break;
+            case "tela-professores":
+                renderizarProfessores();
+                break;
+        }
     }
 
     function cancelarMovimentoMatriz() {
         const idMov = appState.matriz.turmaEmMovimentoId;
         const turma = idMov ? appState.dados.turmas.find((t) => t.id === idMov) : null;
         appState.matriz.turmaEmMovimentoId = null;
+        appState.dados.movimento = null;
         if (turma && (!turma.sala || !turma.slot)) {
             appState.matriz.turmaSelecionadaId = null;
         }
@@ -2095,6 +2073,7 @@
                 if (estavaEmMovimento) {
                     appState.matriz.turmaEmMovimentoId = null;
                     appState.matriz.turmaSelecionadaId = null;
+                    appState.dados.movimento = null;
                 } else {
                     appState.matriz.turmaEmMovimentoId = id;
                     appState.matriz.turmaSelecionadaId = id;
@@ -2119,6 +2098,7 @@
                 appState.matriz.turmaSelecionadaId = id;
                 appState.matriz.diaSelecionado = eventBlock.getAttribute("data-event-dia");
                 appState.matriz.modoEdicaoDrawer = false;
+                appState.dados.movimento = null;
                 renderizarMatriz();
                 return;
             }
@@ -2130,6 +2110,8 @@
                 if (action === "close") {
                     appState.matriz.turmaSelecionadaId = null;
                     appState.matriz.turmaEmMovimentoId = null;
+                    appState.matriz.diaSelecionado = null;
+                    appState.dados.movimento = null;
                     renderizarMatriz();
                 } else if (action === "edit") {
                     appState.matriz.modoEdicaoDrawer = true;
@@ -2140,6 +2122,10 @@
                 } else if (action === "save-edit" && turma) {
                     const horarioVal = document.getElementById("edit-alloc-horario").value.trim().toUpperCase().replace(/\s+/g, " ");
                     const salaVal = document.getElementById("edit-alloc-sala").value;
+                    if (!horarioVal) {
+                        mostrarToast("Informe um horário SIGAA válido ou use o botão Desalocar.");
+                        return;
+                    }
                     try {
                         window.SATIC_DATA.dominio().horario.obterConjuntoSlots(horarioVal);
                     } catch (err) {
@@ -2149,19 +2135,37 @@
                     moverTurma(appState.dados, turma, { sala: salaVal, horario: horarioVal });
                     appState.matriz.modoEdicaoDrawer = false;
                     appState.matriz.turmaEmMovimentoId = null;
+                    appState.dados.movimento = null;
                     renderizarTudo();
                     mostrarToast(`${turma.codigo}: ${rotuloHorario(turma)} · ${nomeEspaco(salaVal)} (no rascunho).`);
                 } else if (action === "unassign" && turma) {
+                    if (turma.status === "EXTERNA_FIXA") {
+                        mostrarToast("Reservas externas fixas não podem ser desalocadas.");
+                        return;
+                    }
                     moverTurma(appState.dados, turma, { sala: null });
                     appState.matriz.modoEdicaoDrawer = false;
+                    appState.matriz.turmaEmMovimentoId = null;
+                    appState.dados.movimento = null;
                     renderizarTudo();
                     mostrarToast(`${turma.codigo} movida para a fila de não alocadas.`);
                 } else if (action === "move-on-grid" && turma) {
-                    appState.matriz.turmaEmMovimentoId = appState.matriz.turmaEmMovimentoId === turma.id ? null : turma.id;
-                    appState.dados.movimento = { turmaId: turma.id, diaOrigem: appState.matriz.diaSelecionado || turma.dias[0] || null };
+                    const ativando = appState.matriz.turmaEmMovimentoId !== turma.id;
+                    appState.matriz.turmaEmMovimentoId = ativando ? turma.id : null;
+                    if (!ativando) {
+                        appState.dados.movimento = null;
+                    } else {
+                        const diaValido = turma.sala && turma.dias.includes(appState.matriz.diaSelecionado)
+                            ? appState.matriz.diaSelecionado
+                            : (turma.sala ? (turma.dias[0] || null) : null);
+                        appState.dados.movimento = { turmaId: turma.id, diaOrigem: diaValido };
+                    }
                     renderizarMatriz();
                 } else if (action === "open-conflict" && turma) {
-                    navegarPara("tela-conflitos", { selecionarConflito: `conf-${turma.id}` });
+                    const conf = obterConflitosConsolidados(appState.dados).find(
+                        (c) => c.turmaId === turma.id || (c.afetadasIds || []).includes(turma.id)
+                    );
+                    navegarPara("tela-conflitos", { selecionarConflito: conf ? conf.id : `conf-${turma.id}` });
                 }
                 return;
             }
@@ -2340,15 +2344,22 @@
                         mostrarToast('Informe uma disciplina e uma quantidade positiva de estudantes.');
                         return;
                     }
+                    const novoProf = document.getElementById("inp-turma-prof").value;
+                    const profAntigo = turma.professor;
                     turma.disciplina = disciplina;
-                    turma.professor = document.getElementById("inp-turma-prof").value;
+                    turma.professor = novoProf;
+                    turma.professores = novoProf
+                        ? [novoProf, ...(turma.professores || []).filter((id) => id !== novoProf && id !== profAntigo)]
+                        : [];
                     turma.alunos = alunos;
                     turma.ambienteExigido = document.getElementById("inp-turma-amb").value;
+                    turma.exigeLaboratorio = turma.ambienteExigido === "Laboratório";
+                    turma._editadaLocal = true;
                     appState.turmas.modoEdicao = false;
                     renderizarTudo();
                     mostrarToast(`Dados de ${turma.codigo} atualizados.`);
                 } else if (act === "open-in-matrix" && turma) {
-                    if (turma.sala) {
+                    if (turma.sala && turma.slot) {
                         navegarPara("tela-matriz", { selecionarTurmaMatriz: turma.id });
                     } else {
                         navegarPara("tela-matriz", { iniciarAlocacaoTurma: turma.id });
@@ -2422,7 +2433,7 @@
                     navegarPara(cmd.replace("nav:", ""));
                 } else if (cmd === "action:gerar-grade") {
                     abrirModalGerarGrade();
-                } else if (cmd === "action:reset-demo") {
+                } else if (cmd === "action:reload-server") {
                     recarregarDoServidor();
                 } else if (cmd.startsWith("turma:")) {
                     const tId = cmd.replace("turma:", "");
@@ -2445,8 +2456,8 @@
                 document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
                 if (tipoExp.includes('CSV')) exportarCSV();
                 else if (tipoExp.includes('ICS')) exportarICS();
-                else if (tipoExp.includes('PDF')) imprimirGrade(tipoExp.includes('professor'));
-                else mostrarToast(`Exportação ${tipoExp}: ainda não implementada nesta versão.`);
+                else if (tipoExp.includes('PDF') && !tipoExp.includes('professor')) imprimirGrade();
+                else mostrarToast(`Exportação ${tipoExp}: pendente / ainda não implementada nesta versão.`);
                 return;
             }
 
@@ -2461,7 +2472,7 @@
                 return;
             }
 
-            if (e.target.closest("[data-reset-demo]")) {
+            if (e.target.closest("[data-reload-server]")) {
                 document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
                 recarregarDoServidor();
             }
@@ -2489,11 +2500,9 @@
 
         document.addEventListener("dragover", (e) => {
             const cell = e.target.closest("td[data-cell-dia]");
-            if (cell) {
+            if (cell && cell.classList.contains("is-drop-valid")) {
                 e.preventDefault();
-                if (cell.classList.contains("is-drop-valid")) {
-                    cell.classList.add("is-drag-over");
-                }
+                cell.classList.add("is-drag-over");
             }
         });
 
@@ -2556,27 +2565,15 @@
             } else if (e.target.id === "matrix-filter-professor") {
                 appState.matriz.professor = e.target.value;
                 renderizarMatriz();
-            } else if (e.target.id === "espacos-filter-tipo") {
-                appState.espacos.tipo = e.target.value;
-                renderizarEspacos();
-            } else if (e.target.id === "espacos-filter-status") {
-                appState.espacos.status = e.target.value;
-                renderizarEspacos();
             } else if (e.target.id === "turmas-filter-curso") {
                 appState.turmas.curso = e.target.value;
                 renderizarTurmas();
             } else if (e.target.id === "turmas-filter-periodo") {
                 appState.turmas.periodo = e.target.value;
                 renderizarTurmas();
-            } else if (e.target.id === "turmas-filter-status") {
-                appState.turmas.status = e.target.value;
-                renderizarTurmas();
             } else if (e.target.id === "turmas-filter-ambiente") {
                 appState.turmas.ambiente = e.target.value;
                 renderizarTurmas();
-            } else if (e.target.id === "professores-filter-status") {
-                appState.professores.status = e.target.value;
-                renderizarProfessores();
             }
         });
 
@@ -2634,6 +2631,7 @@
         if (!viabilidade.valido) {
             mostrarToast(`Slot indisponível: ${viabilidade.motivo}`);
             appState.matriz.turmaEmMovimentoId = null;
+            appState.dados.movimento = null;
             renderizarMatriz();
             return;
         }
@@ -2674,6 +2672,8 @@
                 id: `espaco-${Date.now()}`,
                 nome,
                 codigo,
+                bloco: codigo || "Local",
+                alocavelIc: true,
                 tipo,
                 capacidade,
                 pcs,
@@ -2745,11 +2745,16 @@
 
     /** @param {boolean} perguntar pede confirmação se houver rascunho (o botão "Descartar" já é a confirmação) */
     async function recarregarDoServidor(perguntar = true) {
+        if (confirmandoRascunho) {
+            mostrarToast("Aguarde a confirmação em andamento terminar.");
+            return;
+        }
         document.querySelectorAll(".dropdown-menu.is-open").forEach((m) => m.classList.remove("is-open"));
         if (perguntar && contarRascunho(appState.dados) > 0 && !window.confirm("Descartar as alterações não salvas e recarregar do servidor?")) return;
         try {
             appState.dados = await window.SATIC_DATA.descartarRascunho(appState.dados);
             appState.matriz.turmaEmMovimentoId = null;
+            appState.dados.movimento = null;
             renderizarTudo();
             mostrarToast("Dados recarregados do servidor.");
         } catch (err) {
@@ -2775,12 +2780,28 @@
     }
 
     async function confirmarTudo() {
+        if (confirmandoRascunho) return;
         const n = contarRascunho(appState.dados);
         if (n === 0) return;
+        confirmandoRascunho = true;
+        const enviadoPorId = Object.fromEntries(
+            Object.entries(appState.dados.rascunho).map(([k, v]) => [k, JSON.stringify(v)])
+        );
+        const botoesDraft = [...document.querySelectorAll("[data-draft-action]")];
+        botoesDraft.forEach((b) => { b.disabled = true; });
         try {
             const r = await window.SATIC_DATA.confirmarRascunho(appState.dados);
+            // Preserva edições locais feitas enquanto a requisição estava em voo
+            for (const [tid, mov] of Object.entries(appState.dados.rascunho)) {
+                if (JSON.stringify(mov) === enviadoPorId[tid]) continue;
+                const tNovo = r.estado.turmas.find((x) => x.id === tid);
+                if (!tNovo) continue;
+                if (mov.acao === "remover") moverTurma(r.estado, tNovo, { sala: null });
+                else moverTurma(r.estado, tNovo, { sala: mov.salaLocalId || (mov.salaId != null ? String(mov.salaId) : tNovo.sala), horario: mov.horario });
+            }
             appState.dados = r.estado;
             appState.matriz.turmaEmMovimentoId = null;
+            appState.dados.movimento = null;
             renderizarTudo();
             if (r.recusados === 0) mostrarToast(`${r.aceitos} alteração(ões) gravada(s) no servidor.`);
             else {
@@ -2789,10 +2810,15 @@
             }
         } catch (err) {
             tratarErroApi(err);
+        } finally {
+            confirmandoRascunho = false;
+            botoesDraft.forEach((b) => { b.disabled = false; });
         }
     }
 
     async function resolverViaMotor() {
+        if (consultandoMotor) return;
+        consultandoMotor = true;
         mostrarToast("Consultando o motor do servidor…");
         try {
             const r = await window.SATIC_DATA.buscarSugestoes(appState.dados);
@@ -2801,6 +2827,8 @@
             mostrarToast(n ? `Motor: ${Object.keys(r.alternativasPorTurma).length} turma(s) com alternativas · plano com ${n} mudança(s).` : "O motor não encontrou alternativas dentro do limite de busca.");
         } catch (err) {
             tratarErroApi(err);
+        } finally {
+            consultandoMotor = false;
         }
     }
 
@@ -2822,42 +2850,15 @@
             navegarPara("tela-configuracoes");
             return;
         }
-        const D = window.SATIC_DATA.dominio();
-        const relogio = Object.fromEntries(D.grade.RELOGIO_AULAS.map((a) => [a.id, a]));
-        const diaIcs = { SEG: "MO", TER: "TU", QUA: "WE", QUI: "TH", SEX: "FR", SAB: "SA" };
-        const offset = { SEG: 0, TER: 1, QUA: 2, QUI: 3, SEX: 4, SAB: 5 };
-        const base = new Date(`${inicio}T00:00:00`);
-        const segunda = new Date(base);
-        segunda.setDate(base.getDate() - ((base.getDay() + 6) % 7)); // segunda da 1ª semana
-        const fmtData = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-        const esc = (s) => String(s).replace(/[\\,;]/g, (c) => `\\${c}`).replace(/\n/g, "\\n");
-        const ate = `${fim.replace(/-/g, "")}T235959`;
-        const linhas = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//SATIC IC UFAL//Grade//PT-BR", "CALSCALE:GREGORIAN",
-            `X-WR-CALNAME:SATIC ${appState.dados.semestre}`, "X-WR-TIMEZONE:America/Maceio"];
-        let eventos = 0;
-        for (const t of appState.dados.turmas) {
-            if (!t.sala || !t.horario) continue;
-            for (const b of D.grade.blocosDoHorario(t.horario)) {
-                const dia = new Date(segunda);
-                dia.setDate(segunda.getDate() + offset[b.dia]);
-                if (dia < base) dia.setDate(dia.getDate() + 7); // primeira ocorrência a partir do início
-                const ini = relogio[`${b.turno}${b.inicio}`].inicio.replace(":", "");
-                const fimAula = relogio[`${b.turno}${b.fim}`].fim.replace(":", "");
-                linhas.push("BEGIN:VEVENT",
-                    `UID:satic-${appState.dados.semestre}-${t.apiId}-${b.dia}-${b.turno}${b.inicio}@ic.ufal`,
-                    `DTSTAMP:${fmtData(new Date())}T000000Z`,
-                    `DTSTART;TZID=America/Maceio:${fmtData(dia)}T${ini}00`,
-                    `DTEND;TZID=America/Maceio:${fmtData(dia)}T${fimAula}00`,
-                    `RRULE:FREQ=WEEKLY;BYDAY=${diaIcs[b.dia]};UNTIL=${ate}`,
-                    `SUMMARY:${esc(`${t.codigo}-${t.turma} ${t.disciplina}`)}`,
-                    `LOCATION:${esc(nomeEspaco(t.sala))}`,
-                    `DESCRIPTION:${esc(`Docentes: ${(t.professores || []).join(", ")}\nCurso: ${t.curso}\nHorário SIGAA: ${t.horario}`)}`,
-                    "END:VEVENT");
-                eventos++;
-            }
-        }
-        linhas.push("END:VCALENDAR");
-        const url = URL.createObjectURL(new Blob([linhas.join("\r\n")], { type: "text/calendar;charset=utf-8" }));
+        const { conteudo, eventos } = HELPERS.gerarConteudoICS({
+            semestre: appState.dados.semestre,
+            inicio,
+            fim,
+            turmas: appState.dados.turmas,
+            espacos: appState.dados.espacos,
+            dominio: window.SATIC_DATA.dominio(),
+        });
+        const url = URL.createObjectURL(new Blob([conteudo], { type: "text/calendar;charset=utf-8" }));
         const link = document.createElement("a");
         link.href = url;
         link.download = `satic-${appState.dados.semestre}.ics`;

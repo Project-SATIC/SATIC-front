@@ -54,7 +54,7 @@
                         <div class="dropdown-divider" role="separator"></div>
                         <button type="button" class="dropdown-item" data-nav-target="tela-painel" role="menuitem">Visão geral</button>
                         <button type="button" class="dropdown-item" data-open-cmd="true" role="menuitem">Comandos rápidos</button>
-                        <button type="button" class="dropdown-item" data-reset-demo="true" role="menuitem">Restaurar demonstração</button>
+                        <button type="button" class="dropdown-item" data-reload-server="true" role="menuitem">Recarregar do servidor</button>
                     </div>
                 </div>
             </div>
@@ -82,7 +82,6 @@
                             <h1 class="screen-title">Visão Geral · <span class="mono-num">2026.2</span></h1>
                         </div>
                         <div class="screen-toolbar-right">
-                            <button type="button" class="btn btn-ghost" data-reset-demo="true" title="Restaurar estado inicial de demonstração">Restaurar demonstração</button>
                             <button type="button" class="btn btn-secondary" data-nav-target="tela-matriz">Abrir grade</button>
                         </div>
                     </div>
@@ -243,6 +242,7 @@
                                 <button type="button" class="shift-seg-btn" data-conflict-filter="docente">Docente</button>
                                 <button type="button" class="shift-seg-btn" data-conflict-filter="sala">Sala</button>
                                 <button type="button" class="shift-seg-btn" data-conflict-filter="capacidade">Capacidade</button>
+                                <button type="button" class="shift-seg-btn" data-conflict-filter="horario">Horário</button>
                             </div>
                             <span id="conflitos-header-count" class="grade-summary-count"></span>
                         </div>
@@ -529,7 +529,7 @@
                 <div class="view-body">
                     <div class="settings-content">
                         <div class="detail-section"><h2 class="section-heading">Período letivo</h2><div class="detail-grid"><span class="detail-label">Semestre</span><span class="detail-value mono-num">2026.2</span><span class="detail-label">Etapa</span><span class="detail-value">Pós-oferta (secretaria)</span><label class="detail-label" for="cfg-inicio-semestre">Início das aulas</label><input id="cfg-inicio-semestre" class="control-input" type="date"><label class="detail-label" for="cfg-fim-semestre">Fim das aulas</label><input id="cfg-fim-semestre" class="control-input" type="date"></div><p class="cell-muted">As datas são usadas na exportação ICS (eventos semanais até o fim das aulas). Ficam salvas neste navegador.</p></div><div class="detail-section"><h2 class="section-heading">Cursos e turnos</h2><div class="detail-grid"><span class="detail-label">CC</span><span>Ciência da Computação · manhã e tarde (M1–M6, T1–T6)</span><span class="detail-label">EC</span><span>Engenharia de Computação · manhã e tarde</span><span class="detail-label">IA</span><span>Inteligência Artificial · só noite (N1–N4)</span></div></div>
-                        <div class="detail-section"><h2 class="section-heading">Servidor</h2><div class="detail-grid"><span class="detail-label">API</span><span class="detail-value mono-num" id="cfg-api-url">—</span></div><p class="cell-muted">Turmas, salas, docentes e alocações vêm da API do SATIC-back. Mudanças na grade ficam no rascunho até "Confirmar tudo". Para usar outro servidor, abra a página com <span class="mono-num">?api=http://endereço:porta</span>.</p><p class="cell-muted">Ficam só neste navegador (o servidor ainda não guarda): status e cadastro de espaços, disponibilidade "preferencial", dados de professor, publicação da grade e as prioridades do gerador.</p><div><button type="button" class="btn btn-secondary" data-reset-demo="true">Recarregar do servidor</button></div></div>
+                        <div class="detail-section"><h2 class="section-heading">Servidor</h2><div class="detail-grid"><span class="detail-label">API</span><span class="detail-value mono-num" id="cfg-api-url">—</span></div><p class="cell-muted">Turmas, salas, docentes e alocações vêm da API do SATIC-back. Mudanças na grade ficam no rascunho até "Confirmar tudo". Para usar outro servidor, abra a página com <span class="mono-num">?api=http://endereço:porta</span>.</p><p class="cell-muted">Ficam só neste navegador (o servidor ainda não guarda): status e cadastro de espaços, disponibilidade "preferencial", dados de professor, publicação da grade e as prioridades do gerador.</p><div><button type="button" class="btn btn-secondary" data-reload-server="true">Recarregar do servidor</button></div></div>
                         <div class="detail-section"><h2 class="section-heading">Atalhos</h2><div class="detail-grid"><span class="detail-label mono-num">Ctrl K</span><span>Busca e comandos</span><span class="detail-label mono-num">Esc</span><span>Cancelar alocação ou fechar painel</span><span class="detail-label mono-num">Enter / Espaço</span><span>Selecionar linha ou horário</span></div></div>
                     </div>
                 </div>
@@ -581,6 +581,7 @@
 
     <script src="js/icons.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/helpers.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

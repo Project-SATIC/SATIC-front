@@ -40,15 +40,50 @@ let D = null;
    API
    ========================================================================== */
 
+function normalizarBaseApiConfiavel(valor) {
+    if (!valor || typeof valor !== "string") return null;
+    let url;
+    try {
+        url = new URL(valor.trim(), typeof window !== "undefined" && window.location?.origin ? window.location.origin : API_PADRAO);
+    } catch (_) {
+        return null;
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    const host = url.hostname.toLowerCase();
+    const origemAtual = typeof window !== "undefined" && window.location?.origin ? window.location.origin : null;
+    const privado = /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)
+        || /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)
+        || /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host);
+    const confiavel = (origemAtual && url.origin === origemAtual)
+        || host === "localhost"
+        || host === "127.0.0.1"
+        || host === "::1"
+        || host === "[::1]"
+        || privado
+        || host.endsWith(".local")
+        || host === "ic.ufal.br"
+        || host.endsWith(".ic.ufal.br")
+        || host === "ufal.br"
+        || host.endsWith(".ufal.br");
+    return confiavel ? `${url.origin}${url.pathname}`.replace(/\/+$/, "") : null;
+}
+
 function baseApi() {
     try {
         const daUrl = new URLSearchParams(window.location.search).get("api");
         if (daUrl) {
-            localStorage.setItem("satic.api", daUrl);
-            return daUrl.replace(/\/+$/, "");
+            const valida = normalizarBaseApiConfiavel(daUrl);
+            if (valida) {
+                localStorage.setItem("satic.api", valida);
+                return valida;
+            }
         }
         const salvo = localStorage.getItem("satic.api");
-        if (salvo) return salvo.replace(/\/+$/, "");
+        if (salvo) {
+            const valida = normalizarBaseApiConfiavel(salvo);
+            if (valida) return valida;
+            localStorage.removeItem("satic.api");
+        }
     } catch (_) { /* localStorage bloqueado: usa o padrão */ }
     return API_PADRAO;
 }
@@ -145,7 +180,17 @@ function nomeCurto(nome) {
 }
 
 function recalcularAulas(t) {
-    t.aulas = t.horario ? D.horario.expandirParaSlotsAtomicos(t.horario) : [];
+    t.horarioInvalido = false;
+    if (t.horario) {
+        try {
+            t.aulas = D.horario.expandirParaSlotsAtomicos(t.horario);
+        } catch (_) {
+            t.aulas = [];
+            t.horarioInvalido = true;
+        }
+    } else {
+        t.aulas = [];
+    }
     const dias = new Set(t.aulas.map((a) => a.slice(0, 3)));
     t.dias = DIAS_SEMANA.map((d) => d.id).filter((d) => dias.has(d));
     t.slot = t.horario || null;
@@ -286,8 +331,8 @@ function salaApi(e) {
 
 /** Assinatura dos campos que mudam a validação (memoização por renderização). */
 function assinatura(state) {
-    return state.turmas.map((t) => `${t.id}|${t.sala}|${t.horario}|${t.professores.join(",")}|${t.alunos}`).join(";")
-        + "#" + state.espacos.map((e) => `${e.id}|${e.status}|${e.capacidade}|${e.tipo}`).join(";")
+    return state.turmas.map((t) => `${t.id}|${t.sala}|${t.horario}|${t.professores.join(",")}|${t.alunos}|${t.ambienteExigido}|${t.curso}|${t.aulasSemanais}|${t.requerAlocacaoIc}`).join(";")
+        + "#" + state.espacos.map((e) => `${e.id}|${e.nome}|${e.status}|${e.capacidade}|${e.tipo}|${e.alocavelIc}`).join(";")
         + "#" + state.professores.map((p) => `${p.id}:${Object.keys(p.disponibilidade).filter((k) => p.disponibilidade[k] === "indisponivel").join(",")}`).join(";");
 }
 
@@ -339,7 +384,7 @@ function problemaDe(state, turma, espaco, v, ctx) {
         case "RN-04":
             return { tipo: "sala", categoria: "Ambiente", regra: v.regra, resumoCurto: "Exige laboratório", detalhe: v.mensagem, afetadas: [turma] };
         case "SALA": {
-            const afetadas = outras.filter((a) => espaco && a.sala.id === espaco.apiId).map(turmaDe).filter(Boolean);
+            const afetadas = outras.filter((a) => espaco && (espaco.apiId != null ? a.sala.id === espaco.apiId : a.sala.nome === espaco.nome)).map(turmaDe).filter(Boolean);
             return { tipo: "sala", categoria: "Sala", regra: v.regra, resumoCurto: `${espaco ? espaco.nome : "Sala"} ocupada no mesmo horário`,
                 detalhe: afetadas.length ? `${espaco.nome} já tem ${afetadas.map((x) => x.codigo).join(", ")} nesse horário.` : v.mensagem,
                 afetadas: [turma, ...afetadas] };
@@ -411,15 +456,14 @@ function blocoDoDia(turma, dia) {
    ========================================================================== */
 
 function salasCandidatas(state, turma) {
-    const teorica = turma.ambienteExigido !== "Laboratório";
+    const tApi = turmaApi(state, turma);
+    const ordenar = D.validador.ordenarSalasSoftConstraint(tApi);
     return state.espacos
         .filter((e) => e.status === "Disponível" && (turma.requerAlocacaoIc === false || e.alocavelIc !== false))
-        .filter((e) => e.capacidade >= turma.alunos && (!turma.exigeLaboratorio || e.tipo === "Laboratório"))
-        .sort((a, b) => {
-            const labA = a.tipo === "Laboratório", labB = b.tipo === "Laboratório";
-            if (teorica && labA !== labB) return labA ? 1 : -1; // preserva laboratórios para quem precisa
-            return a.capacidade - b.capacidade || a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" });
-        });
+        .map((e) => ({ e, sApi: salaApi(e) }))
+        .filter(({ sApi }) => D.validador.verificarCapacidade(tApi, sApi) && D.validador.verificarRequisitoLab(tApi, sApi))
+        .sort((a, b) => ordenar(a.sApi, b.sApi))
+        .map(({ e }) => e);
 }
 
 /**
@@ -435,12 +479,25 @@ function resolverSala(state, turma, horario) {
         const v = diagnosticar(atual);
         if (v.length === 0) return { sala: atual.id, origem: "mantida", violacoes: [] };
     }
+    const candidatas = salasCandidatas(state, turma);
     // Regras que não dependem da sala: se falham, nenhuma sala resolve
-    const referencia = atual || salasCandidatas(state, turma)[0] || state.espacos[0];
+    const referencia = atual || candidatas[0] || state.espacos[0];
     const independentes = referencia ? diagnosticar(referencia).filter((v) => ["RN-01", "RN-02", "FORMATO", "TURNO"].includes(v.regra)) : [];
     if (independentes.length > 0) return { sala: null, origem: null, violacoes: independentes };
-    for (const e of salasCandidatas(state, turma)) {
+    for (const e of candidatas) {
         if (diagnosticar(e).length === 0) return { sala: e.id, origem: "sugerida", violacoes: [] };
+    }
+    if (candidatas.length === 0) {
+        const temLab = turma.ambienteExigido !== "Laboratório"
+            || state.espacos.some((e) => e.status === "Disponível" && (turma.requerAlocacaoIc === false || e.alocavelIc !== false) && D.validador.verificarRequisitoLab(tApi, salaApi(e)));
+        if (!temLab) {
+            return { sala: null, origem: null, violacoes: [{ regra: "RN-04", mensagem: "Nenhum laboratório disponível." }] };
+        }
+        return {
+            sala: null,
+            origem: null,
+            violacoes: [{ regra: "RN-03", mensagem: `Nenhuma sala ${turma.ambienteExigido === "Laboratório" ? "de laboratório " : ""}comporta ${turma.alunos} alunos.` }]
+        };
     }
     return { sala: null, origem: null, violacoes: [{ regra: "SALA", mensagem: "Nenhuma sala compatível livre nesse horário." }] };
 }
@@ -475,6 +532,7 @@ function verificarViabilidadeSlot(state, turma, diaAlvo, aulaAlvo) {
     if (mov && mov.diaOrigem) {
         const bloco = blocoDoDia(turma, mov.diaOrigem);
         const tamanho = bloco.length;
+        if (tamanho === 0) return invalido("Dia de origem sem aula da turma");
         if (inicio + tamanho - 1 > maxTurno) return invalido(`Não cabe: bloco de ${tamanho} aula(s)`);
         const resto = turma.aulas.filter((a) => !bloco.includes(a));
         if (resto.some((a) => a.startsWith(`${diaAlvo}-`))) return invalido("Já tem aula nesse dia");
@@ -516,9 +574,15 @@ function registrarRascunho(state, turma) {
         delete state.rascunho[turma.id];
         return;
     }
-    state.rascunho[turma.id] = turma.sala && turma.horario
-        ? { turmaId: turma.apiId, salaId: Number(turma.sala), horario: turma.horario }
-        : { turmaId: turma.apiId, acao: "remover" };
+    if (turma.sala && turma.horario) {
+        const esp = state.espacos.find((e) => e.id === turma.sala);
+        const salaId = esp && esp.apiId != null ? Number(esp.apiId) : null;
+        state.rascunho[turma.id] = salaId != null
+            ? { turmaId: turma.apiId, salaId, horario: turma.horario }
+            : { turmaId: turma.apiId, salaId: null, salaLocalId: turma.sala, horario: turma.horario };
+    } else {
+        state.rascunho[turma.id] = { turmaId: turma.apiId, acao: "remover" };
+    }
 }
 
 function moverTurma(state, turma, { sala, horario }) {
@@ -538,7 +602,11 @@ function contarRascunho(state) {
 async function confirmarRascunho(state) {
     const ids = Object.keys(state.rascunho);
     if (ids.length === 0) return { estado: state, aceitos: 0, recusados: 0, resultados: [] };
-    const movimentos = ids.map((id) => state.rascunho[id]);
+    const movimentosBrutos = ids.map((id) => state.rascunho[id]);
+    if (movimentosBrutos.some((m) => m.salaLocalId != null)) {
+        throw new ErroApi("Há turma alocada em espaço criado apenas nesta sessão (não salvo no servidor). Escolha uma sala cadastrada antes de confirmar.", 400, null);
+    }
+    const movimentos = movimentosBrutos.map(({ salaLocalId: _omit, ...rest }) => rest);
     const { corpo } = await requisitar("POST", "/api/alocacoes/confirmar-lote", { movimentos });
     const novo = await carregar(state.semestre);
     // Mantém as configurações locais da sessão (status de espaços, disponibilidades, publicação)
@@ -565,9 +633,34 @@ async function descartarRascunho(state) {
 function preservarLocais(antigo, novo) {
     for (const e of novo.espacos) {
         const a = antigo.espacos.find((x) => x.id === e.id);
-        if (a) Object.assign(e, { status: a.status, equipamentos: a.equipamentos, observacao: a.observacao, pcs: a.pcs });
+        if (a) {
+            Object.assign(e, {
+                nome: a.nome,
+                codigo: a.codigo,
+                tipo: a.tipo,
+                capacidade: a.capacidade,
+                status: a.status,
+                equipamentos: a.equipamentos,
+                observacao: a.observacao,
+                pcs: a.pcs,
+            });
+        }
     }
     for (const e of antigo.espacos) if (!novo.espacos.some((x) => x.id === e.id)) novo.espacos.push(e);
+    for (const t of novo.turmas) {
+        const a = antigo.turmas.find((x) => x.id === t.id);
+        if (a && a._editadaLocal) {
+            Object.assign(t, {
+                disciplina: a.disciplina,
+                professor: a.professor,
+                professores: a.professores,
+                alunos: a.alunos,
+                ambienteExigido: a.ambienteExigido,
+                exigeLaboratorio: a.exigeLaboratorio,
+                _editadaLocal: true,
+            });
+        }
+    }
     for (const p of novo.professores) {
         const a = antigo.professores.find((x) => x.siape === p.siape);
         if (a) Object.assign(p, { disponibilidade: a.disponibilidade, regime: a.regime, cargaMax: a.cargaMax });
@@ -583,7 +676,9 @@ function preservarLocais(antigo, novo) {
 /** Busca as sugestões do motor (horário + sala) no servidor. Não grava nada. */
 async function buscarSugestoes(state, opcoes = {}) {
     const permitir = Object.entries(state.permitirMudarFormato || {}).filter(([, v]) => v).map(([id]) => Number(id));
-    const movimentos = Object.values(state.rascunho || {});
+    const movimentos = Object.values(state.rascunho || {})
+        .filter((m) => m.salaLocalId == null)
+        .map(({ salaLocalId: _omit, ...rest }) => rest);
     const { corpo } = await requisitar("POST", "/api/alocacoes/sugestoes", {
         semestre: state.semestre,
         // O motor enxerga os conflitos criados no rascunho (aplicado só em memória no servidor)
@@ -614,6 +709,7 @@ function obterConflitosConsolidados(state) {
     const lista = [];
     const vistos = new Set();
     const sug = state.sugestoes;
+    const movel = (t) => t.status !== "DEFINITIVA" && t.status !== "EXTERNA_FIXA";
     for (const turma of state.turmas) {
         const diag = inspecionarTurma(state, turma);
         if (!diag.alocada || diag.problemas.length === 0) continue;
@@ -622,22 +718,50 @@ function obterConflitosConsolidados(state) {
         if (chaveDupla && vistos.has(chaveDupla)) continue;
         if (chaveDupla) vistos.add(chaveDupla);
 
+        const afetadasUnicas = [];
+        const idsAfetadas = new Set();
+        for (const p of diag.problemas) {
+            for (const af of p.afetadas || [turma]) {
+                if (!idsAfetadas.has(af.id)) {
+                    idsAfetadas.add(af.id);
+                    afetadasUnicas.push(af);
+                }
+            }
+        }
+        const representante = (afetadasUnicas.find(movel) || turma);
+
+        const brutas = [];
+        if (sug && sug.alternativasPorTurma) {
+            for (const af of afetadasUnicas) {
+                const doMotor = sug.alternativasPorTurma[af.apiId] || [];
+                doMotor.forEach((s, i) => brutas.push({ af, s, i }));
+            }
+        }
+        brutas.sort((a, b) => (a.s.custo?.pontos ?? 0) - (b.s.custo?.pontos ?? 0));
+        const descVistas = new Set();
         const alternativas = [];
-        const doMotor = sug && sug.alternativasPorTurma ? sug.alternativasPorTurma[turma.apiId] || [] : [];
-        doMotor.forEach((s, i) => alternativas.push({
-            id: `motor-${turma.apiId}-${i}`,
-            descricao: s.descricao,
-            impacto: rotuloCusto(s.custo),
-            aplicar: (st) => aplicarMudancas(st, s.mudancas)
-        }));
+        for (const { af, s, i } of brutas) {
+            const chaveDesc = `${s.descricao}|${JSON.stringify(s.mudancas)}`;
+            if (descVistas.has(chaveDesc)) continue;
+            descVistas.add(chaveDesc);
+            alternativas.push({
+                id: `motor-${af.apiId}-${i}`,
+                descricao: s.descricao,
+                impacto: rotuloCusto(s.custo),
+                aplicar: (st) => aplicarMudancas(st, s.mudancas)
+            });
+        }
+        const diagRep = representante === turma ? diag : inspecionarTurma(state, representante);
+        const problemasRep = diagRep.problemas.length ? diagRep.problemas : diag.problemas;
         lista.push({
-            id: `conf-${turma.id}`,
-            turmaId: turma.id,
-            codigo: turma.codigo,
-            disciplina: turma.disciplina,
-            problemas: diag.problemas,
-            resumoPrincipal: diag.problemas[0].resumoCurto,
-            tipos: diag.problemas.map((p) => p.tipo),
+            id: `conf-${representante.id}`,
+            turmaId: representante.id,
+            afetadasIds: [...idsAfetadas],
+            codigo: representante.codigo,
+            disciplina: representante.disciplina,
+            problemas: problemasRep,
+            resumoPrincipal: problemasRep[0].resumoCurto,
+            tipos: [...new Set(problemasRep.map((p) => p.tipo))],
             alternativas,
             semSugestoes: !sug
         });
@@ -667,6 +791,7 @@ window.SATIC_DATA = {
     DIAS_SEMANA,
     NOME_TURNO,
     ErroApi,
+    normalizarBaseApiConfiavel,
     baseApi,
     carregar,
     carregarDominio,

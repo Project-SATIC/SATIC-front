@@ -19,14 +19,17 @@ const imp = (rel) => import(pathToFileURL(path.join(BACK_TS, rel)).href);
 
 let api; // window.SATIC_DATA
 let dadosApi; // { semestre, salas, turmas, professores, alocacoes }
+let sugerirResolucoes;
 
 before(async () => {
     if (!temBack) return;
-    const [grade, validador, horario, seeder, montar, motor] = await Promise.all([
+    const [grade, validador, horario, seeder, montar, motor, sugestoes] = await Promise.all([
         imp('src/shared/grade.ts'), imp('src/shared/validador.ts'), imp('src/shared/horario-sigaa.ts'),
-        imp('src/seed/seeder.ts'), imp('src/motor/montar-problema.ts'), imp('src/motor/state-space-search.ts')
+        imp('src/seed/seeder.ts'), imp('src/motor/montar-problema.ts'), imp('src/motor/state-space-search.ts'),
+        imp('src/motor/sugestoes.ts')
     ]);
-    const context = { window: { location: { search: '' } }, structuredClone, URLSearchParams, localStorage: { getItem: () => null, setItem() {} } };
+    sugerirResolucoes = sugestoes.sugerirResolucoes;
+    const context = { window: { location: { origin: 'http://127.0.0.1:8040', search: '' } }, structuredClone, URL, URLSearchParams, localStorage: { getItem: () => null, setItem() {}, removeItem() {} } };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../js/data.js'), 'utf8'), context);
     api = context.window.SATIC_DATA;
     api.usarDominio({ grade, validador, horario });
@@ -156,4 +159,126 @@ test('carga docente conta aulas de 50 min de todas as turmas (co-docência inclu
     const esperado = st.turmas.filter((t) => t.professores.includes(id)).reduce((s, t) => s + t.aulas.length, 0);
     assert.equal(api.calcularCargaDocente(st, id), esperado);
     assert.ok(esperado >= 16);
+});
+
+test('CON-01: conflito com DEFINITIVA elege representante móvel e preserva alternativas do motor', opts, () => {
+    const apiClonada = JSON.parse(JSON.stringify(dadosApi));
+    const aComp = apiClonada.alocacoes.find((a) => a.turma.disciplina.codigo === 'COMP360');
+    const aEcom = apiClonada.alocacoes.find((a) => a.turma.disciplina.codigo === 'ECOM032');
+    assert.ok(aComp && aEcom);
+    aComp.status = 'DEFINITIVA';
+    aEcom.status = 'RASCUNHO';
+    aEcom.sala = aComp.sala;
+    aEcom.horarioCodigo = aComp.horarioCodigo;
+    aEcom.turma.aulasSemanais = api.dominio().grade.contarAulas(aComp.horarioCodigo);
+
+    const salasPool = apiClonada.salas.filter((s) => s.alocavelIc);
+    const sug = sugerirResolucoes(apiClonada.turmas, salasPool, apiClonada.alocacoes);
+    assert.ok((sug.alternativasPorTurma[aEcom.turma.id] || []).length > 0);
+
+    const st = api.montarEstado(apiClonada);
+    st.sugestoes = sug;
+    const conflitos = api.obterConflitosConsolidados(st);
+    assert.equal(conflitos.length, 1);
+    assert.equal(conflitos[0].codigo, 'ECOM032', 'escolhe a turma móvel em vez da DEFINITIVA');
+    assert.ok(conflitos[0].alternativas.length > 0, 'expõe alternativas da turma móvel');
+    assert.ok(conflitos[0].afetadasIds.includes(String(aComp.turma.id)));
+    assert.ok(conflitos[0].afetadasIds.includes(String(aEcom.turma.id)));
+});
+
+test('SEC-02: normalizarBaseApiConfiavel aceita local/intranet IC e rejeita scripts e origens externas', opts, () => {
+    assert.equal(api.normalizarBaseApiConfiavel('http://localhost:3001/'), 'http://localhost:3001');
+    assert.equal(api.normalizarBaseApiConfiavel('http://127.0.0.1:3101'), 'http://127.0.0.1:3101');
+    assert.equal(api.normalizarBaseApiConfiavel('http://192.168.0.15:3001'), 'http://192.168.0.15:3001');
+    assert.equal(api.normalizarBaseApiConfiavel('http://10.1.2.3:3001'), 'http://10.1.2.3:3001');
+    assert.equal(api.normalizarBaseApiConfiavel('https://satic.ic.ufal.br'), 'https://satic.ic.ufal.br');
+    assert.equal(api.normalizarBaseApiConfiavel('javascript:alert(1)'), null);
+    assert.equal(api.normalizarBaseApiConfiavel('data:text/javascript,alert(1)'), null);
+    assert.equal(api.normalizarBaseApiConfiavel('https://evil.example'), null);
+});
+
+test('COR-02: verificarViabilidadeSlot bloqueia diaOrigem inexistente na turma', opts, () => {
+    const st = estado();
+    const comp360 = turma(st, 'COMP360');
+    st.movimento = { turmaId: comp360.id, diaOrigem: 'SAB' };
+    const v = api.verificarViabilidadeSlot(st, comp360, 'SEX', 'M1');
+    assert.equal(v.valido, false);
+    assert.match(v.motivo, /Dia de origem/);
+});
+
+test('COR-03: assinatura invalida cache ao mudar ambienteExigido e detecta RN-04 na hora', opts, () => {
+    const st = estado();
+    const t = st.turmas.find((x) => x.ambienteExigido === 'Sala' && st.espacos.find((e) => e.id === x.sala)?.tipo === 'Sala');
+    assert.ok(t);
+    assert.deepEqual(J(api.inspecionarTurma(st, t).problemas), []);
+    t.ambienteExigido = 'Laboratório';
+    t.exigeLaboratorio = true;
+    const diagDepois = api.inspecionarTurma(st, t);
+    assert.ok(diagDepois.problemas.some((p) => p.regra === 'RN-04'), JSON.stringify(diagDepois.problemas));
+});
+
+test('COR-06 (front): montarEstado tolera horário SIGAA ilegível sem quebrar o boot', opts, () => {
+    const apiClonada = JSON.parse(JSON.stringify(dadosApi));
+    const primeira = apiClonada.turmas.find((t) => t.requerAlocacaoIc);
+    primeira.horarioSigaa = '24X99';
+    const aloc = apiClonada.alocacoes.find((a) => a.turma.id === primeira.id);
+    if (aloc) aloc.horarioCodigo = '24X99';
+    const st = api.montarEstado(apiClonada);
+    const t = st.turmas.find((x) => x.apiId === primeira.id);
+    assert.equal(t.horarioInvalido, true);
+    assert.deepEqual(J(t.aulas), []);
+});
+
+test('COR-09: dois espaços locais novos não cruzam conflito e confirmarRascunho recusa sala local sem apiId', opts, async () => {
+    const st = estado();
+    const e1 = { id: 'espaco-1', nome: 'Sala Nova 1', codigo: 'N1', bloco: 'IC', tipo: 'Sala', capacidade: 80, status: 'Disponível', alocavelIc: true };
+    const e2 = { id: 'espaco-2', nome: 'Sala Nova 2', codigo: 'N2', bloco: 'IC', tipo: 'Sala', capacidade: 80, status: 'Disponível', alocavelIc: true };
+    st.espacos.push(e1, e2);
+    const [t1, t2] = st.turmas.filter((t) => t.ambienteExigido === 'Sala' && t.horario === '35M34');
+    assert.ok(t1 && t2);
+    api.moverTurma(st, t1, { sala: e1.id });
+    api.moverTurma(st, t2, { sala: e2.id });
+    assert.deepEqual(J(api.inspecionarTurma(st, t1).problemas), []);
+    assert.deepEqual(J(api.inspecionarTurma(st, t2).problemas), []);
+    await assert.rejects(() => api.confirmarRascunho(st), /espaço criado apenas nesta sessão/i);
+});
+
+test('SEC-04 (serve.cjs): URL malformada retorna HTTP 400 sem derrubar o servidor', async () => {
+    const { criarServidorEstatico } = require('../tools/serve.cjs');
+    const srv = criarServidorEstatico();
+    await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
+    const { port } = srv.address();
+    try {
+        const res = await fetch(`http://127.0.0.1:${port}/%E0%A4%A`);
+        assert.equal(res.status, 400);
+        const ok = await fetch(`http://127.0.0.1:${port}/`);
+        assert.equal(ok.status, 200);
+    } finally {
+        await new Promise((resolve) => srv.close(resolve));
+    }
+});
+
+test('ARC-01: ordenação e requisito de laboratório no front usam exatamente a regra compartilhada do servidor', opts, () => {
+    const st = api.criarDadosIniciais();
+    st.semestre = '2026.2';
+    st.espacos = [
+        { id: '1', apiId: 1, nome: 'Sala Á', codigo: 'IC', bloco: 'IC', tipo: 'Sala', capacidade: 40, status: 'Disponível', alocavelIc: true },
+        { id: '2', apiId: 2, nome: 'Sala B', codigo: 'IC', bloco: 'IC', tipo: 'Sala', capacidade: 40, status: 'Disponível', alocavelIc: true },
+        { id: '3', apiId: 3, nome: 'Lab Sem Acento', codigo: 'IC', bloco: 'IC', tipo: 'Laboratorio', capacidade: 40, status: 'Disponível', alocavelIc: true },
+    ];
+    const teorica = {
+        id: '10', apiId: 10, codigo: 'T1', disciplina: 'Teorica', turma: '01', curso: 'CC',
+        professores: [], alunos: 30, ambienteExigido: 'Sala', exigeLaboratorio: false,
+        requerAlocacaoIc: true, aulasSemanais: 2, horario: '2M12', aulas: ['SEG-M1', 'SEG-M2'], dias: ['SEG'], sala: null
+    };
+    const pratica = {
+        ...teorica, id: '11', apiId: 11, codigo: 'P1', disciplina: 'Pratica',
+        ambienteExigido: 'Laboratório', exigeLaboratorio: true
+    };
+    st.turmas = [teorica, pratica];
+
+    const rTeorica = api.resolverSala(st, teorica, '2M12');
+    assert.equal(rTeorica.sala, '2', 'compareToIgnoreCase prioriza Sala B antes de Sala Á, e preserva o laboratório');
+    const rPratica = api.resolverSala(st, pratica, '2M12');
+    assert.equal(rPratica.sala, '3', 'aceita tipo "Laboratorio" sem acento exatamente como o back-end');
 });

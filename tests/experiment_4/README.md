@@ -14,11 +14,7 @@ npm install
 npm run local
 ```
 
-Na primeira vez, gere as alocações iniciais (opcional, o "Gerar grade" também funciona):
-
-```powershell
-Invoke-RestMethod -Method Post -Uri http://localhost:3001/api/alocacoes/gerar -ContentType application/json -Body '{}'
-```
+Na primeira vez (banco vazio), `npm run local` já aplica as migrations, executa o seed e gera as alocações iniciais automaticamente via motor (o botão **"Gerar grade"** também consolida via motor de sugestões).
 
 Em outro terminal, sirva o front:
 
@@ -34,19 +30,17 @@ Se a API ou o banco estiverem fora do ar, a tela mostra **"Servidor indisponíve
 ## Testar
 
 ```powershell
-node --test tests/data.test.cjs
+node --test tests/data.test.cjs tests/app-helpers.test.cjs
 ```
 
-Os testes carregam `js/data.js` como o navegador faria e usam os módulos de regra **direto do repositório SATIC-back** (o Node 22.18+ roda `.ts`). Por padrão o caminho é `../../../../SATIC-back/ts`, com os dois repositórios lado a lado; para outro lugar, use `SATIC_BACK_TS`. Os dados são a oferta real 2026.2 alocada pelo motor. São 9 testes:
+Os testes carregam `js/data.js` e `js/helpers.js` como o navegador faria e usam os módulos de regra **direto do repositório SATIC-back** (o Node 22.18+ roda `.ts`). Por padrão o caminho é `../../../../SATIC-back/ts`, com os dois repositórios lado a lado; para outro lugar, use `SATIC_BACK_TS`. Os dados são a oferta real 2026.2 alocada pelo motor. São **22 testes** (17 em `data.test.cjs` e 5 em `app-helpers.test.cjs`):
 - grade em aulas de 50 min;
 - adaptação das 88 turmas sem conflito;
-- mover um bloco;
-- bloqueios de dia repetido, turno e espaço;
-- RN-01 provocada;
-- rascunho;
-- sala mantida ou sugerida;
-- espaço em manutenção;
-- carga docente.
+- mover um bloco e bloqueios (dia repetido, turno, espaço, dia de origem inválido);
+- RN-01 provocada, invalidação de cache em edição e consolidação de conflitos com `DEFINITIVA`;
+- rascunho, sala mantida/sugerida (e paridade de ordenação com o back-end), espaços locais e proteção de `EXTERNA_FIXA`;
+- validação de origem em `?api=` (local e intranet IC), tolerância a horário ilegível e servidor estático `serve.cjs`;
+- carga docente, helpers de UI (escapes XSS, busca por SIAPE `IC-`, categoria `Turno`) e geração de `.ics` (RFC 5545).
 
 ## Como a grade funciona agora
 
@@ -68,10 +62,10 @@ Os testes carregam `js/data.js` como o navegador faria e usam os módulos de reg
   - "Aplicar alternativa" coloca a sugestão no rascunho.
 - **Gerar grade** consolida: o servidor verifica os conflitos, o motor propõe um plano, e "Colocar no rascunho" aplica o plano para revisão.
 - **Exportar:**
-  - CSV com os dados reais;
-  - **ICS** com eventos semanais por bloco até o fim das aulas (defina início e fim em Configurações);
-  - **PDF** pela impressão do navegador ("Salvar como PDF").
-  - XLSX continua sem implementação.
+  - **CSV** com os dados reais;
+  - **ICS** com eventos semanais (`VTIMEZONE` `America/Maceio`, `UNTIL` em UTC) até o fim das aulas (defina início e fim em Configurações);
+  - **PDF da grade oficial** pela impressão do navegador ("Salvar como PDF");
+  - **Planilha SIAP (XLSX)** e **Grade por professor (PDF)** continuam pendentes / fora do escopo atual (a UI sinaliza como não implementadas).
 - **Cursos:** CC e EC (manhã e tarde) e IA (noite). Turmas conjuntas ("CC, EC") aparecem nos dois filtros. O filtro de período fica vazio, porque o back ainda não tem o período das disciplinas.
 
 ## Funções que ficam só no navegador
@@ -83,6 +77,13 @@ O back-end ainda não guarda estas informações. Elas funcionam na sessão, e a
 - publicar a grade;
 - prioridades do gerador ("agrupar horários", "preferências"), que o motor ainda não usa;
 - as datas do semestre usadas no ICS, guardadas no `localStorage` deste navegador.
+
+## Módulos e funcionalidades pendentes
+
+Além do que fica apenas na sessão acima (sem persistência no banco), os seguintes módulos estão **pendentes / fora do escopo atual** (consolidado também em `SATIC-back/docs/modelo-aulas-e-motor-de-sugestoes.md` seção 7):
+- **Exportação "Grade por professor (PDF)"**: não é requisito funcional no momento; marcada como pendente na UI e na documentação.
+- **Exportação "Planilha SIAP (XLSX)"**: pendente / não implementada.
+- **Autenticação/controle de acesso**: o sistema é previsto para uso local ou em servidor restrito da intranet do IC/UFAL (não público na internet); ao publicar na rede do IC, configurar `CORS_ORIGIN`, `NODE_ENV=production` e restrição de rede/proxy conforme necessidade.
 
 ## Verificado no navegador (19/11/2026)
 
