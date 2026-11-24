@@ -2268,10 +2268,16 @@
                 } else if (conflitos.length > 0 || pendentes) {
                     mostrarToast(`Resolva os ${conflitos.length} conflitos críticos antes de publicar a grade.`);
                 } else {
-                    appState.dados.publicada = true;
-                    assinaturaPublicada = assinaturaDados();
-                    renderizarConflitosEPublicacao();
-                    mostrarToast("Proposta marcada como publicada nesta sessão.");
+                    (async () => {
+                        try {
+                            await SATIC_DATA.publicarGrade(appState.dados);
+                            assinaturaPublicada = assinaturaDados();
+                            renderizarTudo();
+                            mostrarToast("Grade oficial publicada e congelada no banco de dados.");
+                        } catch (err) {
+                            mostrarToast(`Erro ao publicar grade: ${err.message || "falha na API"}`);
+                        }
+                    })();
                 }
                 return;
             }
@@ -2420,11 +2426,10 @@
                     prof.disponibilidade[key] = proximo;
                     renderizarTudo();
 
-                    const mudouIndisp = atual === "indisponivel" || proximo === "indisponivel";
-                    if (mudouIndisp && prof.siape) {
+                    if (prof.siape) {
                         (async () => {
                             try {
-                                await SATIC_DATA.salvarIndisponibilidadeDocente(prof.siape, key, proximo === "indisponivel");
+                                await SATIC_DATA.salvarDisponibilidadeDocente(prof.siape, key, proximo);
                                 mostrarToast(`Horário ${key.replace(":", " ")} salvo como ${proximo}.`);
                             } catch (err) {
                                 prof.disponibilidade[key] = atual;
@@ -2717,14 +2722,13 @@
                     tipo,
                     bloco: codigo || "IC",
                     alocavelIc: true,
+                    status,
+                    pcs,
+                    equipamentos,
                 });
                 const novo = {
                     ...salvo,
-                    pcs,
-                    equipamentos,
-                    status,
                     pavimento: salvo.bloco,
-                    observacao: "Pool de salas do IC.",
                 };
                 appState.dados.espacos.push(novo);
                 appState.espacos.espacoSelecionadoId = novo.id;
@@ -2739,6 +2743,9 @@
                             tipo,
                             bloco: codigo || esp.bloco || "IC",
                             alocavelIc: esp.alocavelIc,
+                            status,
+                            pcs,
+                            equipamentos,
                         });
                         Object.assign(esp, atualizado);
                     } else {
@@ -2747,10 +2754,10 @@
                         esp.bloco = codigo || esp.bloco;
                         esp.tipo = tipo;
                         esp.capacidade = capacidade;
+                        esp.pcs = pcs;
+                        esp.equipamentos = equipamentos;
+                        esp.status = status;
                     }
-                    esp.pcs = pcs;
-                    esp.equipamentos = equipamentos;
-                    esp.status = status;
                     mostrarToast(`Espaço ${nome} atualizado no banco.`);
                 }
             }
@@ -2788,8 +2795,8 @@
         mostrarStatusApi("carregando");
         try {
             const novo = await window.SATIC_DATA.carregar(appState.dados.semestre || "2026.2");
-            if (appState.dados.carregado) novo.publicada = appState.dados.publicada;
             appState.dados = novo;
+            if (novo.publicada) assinaturaPublicada = assinaturaDados();
             appState.matriz.turmaEmMovimentoId = null;
             mostrarStatusApi("ok");
             renderizarTudo();
