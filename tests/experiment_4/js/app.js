@@ -2346,18 +2346,45 @@
                     }
                     const novoProf = document.getElementById("inp-turma-prof").value;
                     const profAntigo = turma.professor;
-                    turma.disciplina = disciplina;
-                    turma.professor = novoProf;
-                    turma.professores = novoProf
+                    const novosProfs = novoProf
                         ? [novoProf, ...(turma.professores || []).filter((id) => id !== novoProf && id !== profAntigo)]
                         : [];
-                    turma.alunos = alunos;
-                    turma.ambienteExigido = document.getElementById("inp-turma-amb").value;
-                    turma.exigeLaboratorio = turma.ambienteExigido === "Laboratório";
-                    turma._editadaLocal = true;
-                    appState.turmas.modoEdicao = false;
-                    renderizarTudo();
-                    mostrarToast(`Dados de ${turma.codigo} atualizados.`);
+                    const novoAmbiente = document.getElementById("inp-turma-amb").value;
+                    const exigeLab = novoAmbiente === "Laboratório";
+
+                    (async () => {
+                        try {
+                            if (turma.apiId != null) {
+                                await SATIC_DATA.atualizarTurma(appState.dados, turma, {
+                                    disciplina,
+                                    professoresIds: novosProfs,
+                                    alunos,
+                                    exigeLaboratorio: exigeLab,
+                                });
+                            }
+                            turma.disciplina = disciplina;
+                            turma.professor = novoProf;
+                            turma.professores = novosProfs;
+                            turma.alunos = alunos;
+                            turma.vagas = Math.max(turma.vagas || 0, alunos);
+                            turma.ambienteExigido = novoAmbiente;
+                            turma.exigeLaboratorio = exigeLab;
+                            turma._editadaLocal = turma.apiId == null;
+                            // Mantém coerência de nome/laboratório nas demais turmas da mesma disciplina
+                            for (const outra of appState.dados.turmas) {
+                                if (outra !== turma && outra.codigo === turma.codigo) {
+                                    outra.disciplina = disciplina;
+                                    outra.ambienteExigido = novoAmbiente;
+                                    outra.exigeLaboratorio = exigeLab;
+                                }
+                            }
+                            appState.turmas.modoEdicao = false;
+                            renderizarTudo();
+                            mostrarToast(`Dados de ${turma.codigo} salvos no banco.`);
+                        } catch (err) {
+                            mostrarToast(`Erro ao salvar ${turma.codigo}: ${err.message || "falha na API"}`);
+                        }
+                    })();
                 } else if (act === "open-in-matrix" && turma) {
                     if (turma.sala && turma.slot) {
                         navegarPara("tela-matriz", { selecionarTurmaMatriz: turma.id });
@@ -2392,7 +2419,22 @@
                     const proximo = atual === "disponivel" ? "preferencial" : atual === "preferencial" ? "indisponivel" : "disponivel";
                     prof.disponibilidade[key] = proximo;
                     renderizarTudo();
-                    mostrarToast(`Horário ${key.replace(":", " ")} alterado para ${proximo}.`);
+
+                    const mudouIndisp = atual === "indisponivel" || proximo === "indisponivel";
+                    if (mudouIndisp && prof.siape) {
+                        (async () => {
+                            try {
+                                await SATIC_DATA.salvarIndisponibilidadeDocente(prof.siape, key, proximo === "indisponivel");
+                                mostrarToast(`Horário ${key.replace(":", " ")} salvo como ${proximo}.`);
+                            } catch (err) {
+                                prof.disponibilidade[key] = atual;
+                                renderizarTudo();
+                                mostrarToast(`Erro ao salvar disponibilidade: ${err.message || "falha na API"}`);
+                            }
+                        })();
+                    } else {
+                        mostrarToast(`Horário ${key.replace(":", " ")} alterado para ${proximo}.`);
+                    }
                 }
                 return;
             }
@@ -2645,7 +2687,7 @@
         mostrarToast(`${turma.codigo}: ${rotuloHorario(turma)} · ${nomeEspaco(viabilidade.salaSugerida)}${viabilidade.origemSala === "sugerida" ? " (sala sugerida)" : ""} — no rascunho.`);
     }
 
-    function salvarFormularioEspaco() {
+    async function salvarFormularioEspaco() {
         const nome = document.getElementById("inp-esp-nome").value.trim();
         const codigo = document.getElementById("inp-esp-codigo").value.trim();
         const tipo = document.getElementById("inp-esp-tipo").value;
@@ -2667,41 +2709,58 @@
             return;
         }
 
-        if (appState.espacos.criandoNovo) {
-            const novo = {
-                id: `espaco-${Date.now()}`,
-                nome,
-                codigo,
-                bloco: codigo || "Local",
-                alocavelIc: true,
-                tipo,
-                capacidade,
-                pcs,
-                equipamentos,
-                status,
-                pavimento: "Térreo",
-                observacao: "Cadastrado na sessão atual."
-            };
-            appState.dados.espacos.push(novo);
-            appState.espacos.espacoSelecionadoId = novo.id;
-            mostrarToast(`Espaço ${nome} adicionado ao inventário.`);
-        } else {
-            const esp = appState.dados.espacos.find((e) => e.id === appState.espacos.espacoSelecionadoId);
-            if (esp) {
-                esp.nome = nome;
-                esp.codigo = codigo;
-                esp.tipo = tipo;
-                esp.capacidade = capacidade;
-                esp.pcs = pcs;
-                esp.equipamentos = equipamentos;
-                esp.status = status;
-                mostrarToast(`Espaço ${nome} atualizado.`);
+        try {
+            if (appState.espacos.criandoNovo) {
+                const salvo = await SATIC_DATA.criarEspaco({
+                    nome,
+                    capacidade,
+                    tipo,
+                    bloco: codigo || "IC",
+                    alocavelIc: true,
+                });
+                const novo = {
+                    ...salvo,
+                    pcs,
+                    equipamentos,
+                    status,
+                    pavimento: salvo.bloco,
+                    observacao: "Pool de salas do IC.",
+                };
+                appState.dados.espacos.push(novo);
+                appState.espacos.espacoSelecionadoId = novo.id;
+                mostrarToast(`Espaço ${nome} salvo no banco de dados.`);
+            } else {
+                const esp = appState.dados.espacos.find((e) => e.id === appState.espacos.espacoSelecionadoId);
+                if (esp) {
+                    if (esp.apiId != null) {
+                        const atualizado = await SATIC_DATA.atualizarEspaco(esp.apiId, {
+                            nome,
+                            capacidade,
+                            tipo,
+                            bloco: codigo || esp.bloco || "IC",
+                            alocavelIc: esp.alocavelIc,
+                        });
+                        Object.assign(esp, atualizado);
+                    } else {
+                        esp.nome = nome;
+                        esp.codigo = codigo;
+                        esp.bloco = codigo || esp.bloco;
+                        esp.tipo = tipo;
+                        esp.capacidade = capacidade;
+                    }
+                    esp.pcs = pcs;
+                    esp.equipamentos = equipamentos;
+                    esp.status = status;
+                    mostrarToast(`Espaço ${nome} atualizado no banco.`);
+                }
             }
-        }
 
-        appState.espacos.modoEdicao = false;
-        appState.espacos.criandoNovo = false;
-        renderizarTudo();
+            appState.espacos.modoEdicao = false;
+            appState.espacos.criandoNovo = false;
+            renderizarTudo();
+        } catch (err) {
+            mostrarToast(`Erro ao salvar espaço: ${err.message || "falha na API"}`);
+        }
     }
 
     /* ==========================================================================

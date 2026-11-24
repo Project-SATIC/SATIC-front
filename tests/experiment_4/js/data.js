@@ -629,16 +629,12 @@ async function descartarRascunho(state) {
     return novo;
 }
 
-/** Configurações que só existem no navegador (sem rota no back ainda). */
+/** Configurações que só existem no navegador (sem colunas equivalentes no banco). */
 function preservarLocais(antigo, novo) {
     for (const e of novo.espacos) {
         const a = antigo.espacos.find((x) => x.id === e.id);
         if (a) {
             Object.assign(e, {
-                nome: a.nome,
-                codigo: a.codigo,
-                tipo: a.tipo,
-                capacidade: a.capacidade,
                 status: a.status,
                 equipamentos: a.equipamentos,
                 observacao: a.observacao,
@@ -646,7 +642,9 @@ function preservarLocais(antigo, novo) {
             });
         }
     }
-    for (const e of antigo.espacos) if (!novo.espacos.some((x) => x.id === e.id)) novo.espacos.push(e);
+    for (const e of antigo.espacos) {
+        if (e.apiId == null && !novo.espacos.some((x) => x.id === e.id)) novo.espacos.push(e);
+    }
     for (const t of novo.turmas) {
         const a = antigo.turmas.find((x) => x.id === t.id);
         if (a && a._editadaLocal) {
@@ -663,10 +661,94 @@ function preservarLocais(antigo, novo) {
     }
     for (const p of novo.professores) {
         const a = antigo.professores.find((x) => x.siape === p.siape);
-        if (a) Object.assign(p, { disponibilidade: a.disponibilidade, regime: a.regime, cargaMax: a.cargaMax });
+        if (a) {
+            const pref = {};
+            for (const [k, v] of Object.entries(a.disponibilidade || {})) {
+                if (v === "preferencial" && p.disponibilidade[k] !== "indisponivel") pref[k] = "preferencial";
+            }
+            Object.assign(p.disponibilidade, pref);
+            Object.assign(p, { regime: a.regime, cargaMax: a.cargaMax });
+        }
     }
     novo.publicada = antigo.publicada;
     novo.permitirMudarFormato = antigo.permitirMudarFormato || {};
+}
+
+/* ==========================================================================
+   Persistência de cadastros no PostgreSQL (salas, turmas, disciplinas, restrições)
+   ========================================================================== */
+
+async function criarEspaco({ nome, capacidade, tipo, bloco, alocavelIc = true }) {
+    const { corpo } = await requisitar("POST", "/api/salas", {
+        nome,
+        capacidade,
+        tipoEspaco: tipo,
+        bloco: bloco || "IC",
+        alocavelIc,
+    });
+    return {
+        id: String(corpo.id),
+        apiId: corpo.id,
+        nome: corpo.nome,
+        codigo: corpo.bloco,
+        bloco: corpo.bloco,
+        tipo: corpo.tipoEspaco,
+        capacidade: corpo.capacidade,
+        alocavelIc: corpo.alocavelIc,
+    };
+}
+
+async function atualizarEspaco(apiId, { nome, capacidade, tipo, bloco, alocavelIc }) {
+    const payload = {
+        nome,
+        capacidade,
+        tipoEspaco: tipo,
+        bloco: bloco || "IC",
+        ...(alocavelIc !== undefined ? { alocavelIc } : {}),
+    };
+    const { corpo } = await requisitar("PUT", `/api/salas/${encodeURIComponent(apiId)}`, payload);
+    return {
+        id: String(corpo.id),
+        apiId: corpo.id,
+        nome: corpo.nome,
+        codigo: corpo.bloco,
+        bloco: corpo.bloco,
+        tipo: corpo.tipoEspaco,
+        capacidade: corpo.capacidade,
+        alocavelIc: corpo.alocavelIc,
+    };
+}
+
+async function salvarIndisponibilidadeDocente(siape, chaveSlot, indisponivel) {
+    const [dia, aula] = String(chaveSlot).split(":");
+    const horario = `${dia}-${aula[0]}-${aula.slice(1)}`;
+    if (indisponivel) {
+        await requisitar("POST", `/api/professores/${encodeURIComponent(siape)}/restricoes`, {
+            horarioIndisponivel: horario,
+        });
+    } else {
+        await requisitar("DELETE", `/api/professores/${encodeURIComponent(siape)}/restricoes/${encodeURIComponent(horario)}`);
+    }
+}
+
+async function atualizarTurma(state, turma, { disciplina, professoresIds, alunos, exigeLaboratorio }) {
+    const siapes = (professoresIds || [])
+        .map((id) => state.professores.find((p) => p.id === id)?.siape)
+        .filter(Boolean);
+
+    await requisitar("PUT", `/api/turmas/${encodeURIComponent(turma.apiId)}`, {
+        matriculados: alunos,
+        vagas: Math.max(turma.vagas || 0, alunos),
+        professores: siapes,
+    });
+
+    const mudouDisciplina = disciplina !== turma.disciplina || exigeLaboratorio !== turma.exigeLaboratorio;
+    if (mudouDisciplina && turma.codigo) {
+        await requisitar("PUT", `/api/disciplinas/${encodeURIComponent(turma.codigo)}`, {
+            nome: disciplina,
+            exigeLaboratorio,
+        });
+    }
 }
 
 /* ==========================================================================
@@ -813,5 +895,9 @@ window.SATIC_DATA = {
     aplicarMudancas,
     gerarPropostaGrade,
     calcularCargaDocente,
+    criarEspaco,
+    atualizarEspaco,
+    salvarIndisponibilidadeDocente,
+    atualizarTurma,
     dominio: () => D
 };
