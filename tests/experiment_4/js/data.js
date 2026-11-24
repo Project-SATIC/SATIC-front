@@ -201,9 +201,10 @@ function recalcularAulas(t) {
  * Converte as respostas da API no estado das telas.
  * Turmas externas (requerAlocacaoIc = false) só entram se ocupam sala do IC (reserva EXTERNA_FIXA).
  */
-function montarEstado({ semestre, salas, turmas, professores, alocacoes }) {
+function montarEstado({ semestre, salas, turmas, professores, alocacoes, publicacao }) {
     const estado = criarDadosIniciais();
     estado.semestre = semestre;
+    estado.publicada = Boolean(publicacao && publicacao.publicada);
     estado.carregado = true;
 
     estado.espacos = salas.map((s) => ({
@@ -213,13 +214,13 @@ function montarEstado({ semestre, salas, turmas, professores, alocacoes }) {
         codigo: s.bloco,
         tipo: s.tipoEspaco,
         capacidade: s.capacidade,
-        pcs: s.tipoEspaco && s.tipoEspaco.toLowerCase().startsWith("laborat") ? s.capacidade : 0,
-        equipamentos: [],
-        status: "Disponível",
+        pcs: s.pcs != null ? s.pcs : (s.tipoEspaco && s.tipoEspaco.toLowerCase().startsWith("laborat") ? s.capacidade : 0),
+        equipamentos: Array.isArray(s.equipamentos) ? s.equipamentos : [],
+        status: s.status || "Disponível",
         pavimento: s.bloco,
         bloco: s.bloco,
         alocavelIc: s.alocavelIc,
-        observacao: s.alocavelIc ? "Pool de salas do IC." : "Fora do pool do IC (CTEC/IF)."
+        observacao: s.observacao != null ? s.observacao : (s.alocavelIc ? "Pool de salas do IC." : "Fora do pool do IC (CTEC/IF).")
     }));
 
     // Ids curtos e únicos para os docentes (o app usa o id como rótulo nas telas)
@@ -230,14 +231,26 @@ function montarEstado({ semestre, salas, turmas, professores, alocacoes }) {
         if (usados.has(curto)) curto = `${curto} (${p.matriculaSiape})`;
         usados.set(curto, true);
         const disponibilidade = {};
+        for (const pref of p.preferencias || []) {
+            for (const slot of D.horario.slotsDaIndisponibilidade(pref)) disponibilidade[slot.replace("-", ":")] = "preferencial";
+        }
         for (const ind of p.indisponibilidades || []) {
             for (const slot of D.horario.slotsDaIndisponibilidade(ind)) disponibilidade[slot.replace("-", ":")] = "indisponivel";
         }
-        const prof = { id: curto, nome: nomeProprio(p.nome), curto, siape: p.matriculaSiape, regime: "—", cargaMax: null, disponibilidade };
+        const prof = {
+            id: curto,
+            nome: nomeProprio(p.nome),
+            curto,
+            siape: p.matriculaSiape,
+            regime: p.regime || "—",
+            cargaMax: p.cargaMax ?? null,
+            disponibilidade
+        };
         estado.professores.push(prof);
         profPorSiape.set(p.matriculaSiape, prof);
     }
 
+    estado.permitirMudarFormato = {};
     const alocPorTurma = new Map(alocacoes.map((a) => [a.turma.id, a]));
     for (const t of turmas) {
         const aloc = alocPorTurma.get(t.id);
@@ -245,12 +258,23 @@ function montarEstado({ semestre, salas, turmas, professores, alocacoes }) {
         const ids = t.professores.map((p) => {
             let prof = profPorSiape.get(p.matriculaSiape);
             if (!prof) { // docente que veio só na turma (não listado em /professores)
-                prof = { id: nomeCurto(p.nome), nome: nomeProprio(p.nome), curto: nomeCurto(p.nome), siape: p.matriculaSiape, regime: "—", cargaMax: null, disponibilidade: {} };
+                prof = {
+                    id: nomeCurto(p.nome),
+                    nome: nomeProprio(p.nome),
+                    curto: nomeCurto(p.nome),
+                    siape: p.matriculaSiape,
+                    regime: p.regime || "—",
+                    cargaMax: p.cargaMax ?? null,
+                    disponibilidade: {}
+                };
                 estado.professores.push(prof);
                 profPorSiape.set(p.matriculaSiape, prof);
             }
             return prof.id;
         });
+        if (t.permitirMudarFormato) {
+            estado.permitirMudarFormato[t.id] = true;
+        }
         const turma = {
             id: String(t.id),
             apiId: t.id,
@@ -268,6 +292,7 @@ function montarEstado({ semestre, salas, turmas, professores, alocacoes }) {
             cargaHoraria: t.disciplina.cargaHoraria,
             requerAlocacaoIc: t.requerAlocacaoIc,
             aulasSemanais: t.aulasSemanais || null,
+            permitirMudarFormato: Boolean(t.permitirMudarFormato),
             horarioPreGrade: t.horarioSigaa,
             horario: aloc ? aloc.horarioCodigo : t.horarioSigaa,
             sala: aloc ? String(aloc.sala.id) : null,
@@ -283,13 +308,21 @@ function montarEstado({ semestre, salas, turmas, professores, alocacoes }) {
 async function carregar(semestre = SEMESTRE_PADRAO) {
     await carregarDominio();
     const q = `?semestre=${encodeURIComponent(semestre)}`;
-    const [salas, turmas, professores, alocacoes] = await Promise.all([
+    const [salas, turmas, professores, alocacoes, publicacao] = await Promise.all([
         requisitar("GET", "/api/salas"),
         requisitar("GET", `/api/turmas${q}`),
         requisitar("GET", "/api/professores"),
-        requisitar("GET", `/api/alocacoes${q}`)
+        requisitar("GET", `/api/alocacoes${q}`),
+        requisitar("GET", `/api/alocacoes/publicacao${q}`).catch(() => ({ corpo: { publicada: false } }))
     ]);
-    return montarEstado({ semestre, salas: salas.corpo, turmas: turmas.corpo, professores: professores.corpo, alocacoes: alocacoes.corpo });
+    return montarEstado({
+        semestre,
+        salas: salas.corpo,
+        turmas: turmas.corpo,
+        professores: professores.corpo,
+        alocacoes: alocacoes.corpo,
+        publicacao: publicacao.corpo,
+    });
 }
 
 /* ==========================================================================
@@ -326,7 +359,15 @@ function turmaApi(state, t, horario = t.horario) {
 }
 
 function salaApi(e) {
-    return { id: e.apiId, nome: e.nome, capacidade: e.capacidade, tipoEspaco: e.tipo, bloco: e.bloco, alocavelIc: e.alocavelIc !== false };
+    return {
+        id: e.apiId,
+        nome: e.nome,
+        capacidade: e.capacidade,
+        tipoEspaco: e.tipo,
+        bloco: e.bloco,
+        alocavelIc: e.alocavelIc !== false,
+        status: e.status || "Disponível"
+    };
 }
 
 /** Assinatura dos campos que mudam a validação (memoização por renderização). */
@@ -391,6 +432,8 @@ function problemaDe(state, turma, espaco, v, ctx) {
         }
         case "ESCOPO":
             return { tipo: "sala", categoria: "Espaço", regra: v.regra, resumoCurto: "Sala fora do pool do IC", detalhe: v.mensagem, afetadas: [turma] };
+        case "MANUTENCAO":
+            return { tipo: "sala", categoria: "Espaço", regra: v.regra, resumoCurto: "Espaço indisponível", detalhe: v.mensagem, afetadas: [turma] };
         case "TURNO":
             return { tipo: "horario", categoria: "Turno", regra: v.regra, resumoCurto: "Turno fora do curso", detalhe: v.mensagem, afetadas: [turma] };
         default:
@@ -398,7 +441,7 @@ function problemaDe(state, turma, espaco, v, ctx) {
     }
 }
 
-/** Diagnóstico de uma turma (o mesmo validador do servidor + o status local do espaço). */
+/** Diagnóstico de uma turma (o mesmo validador do servidor). */
 function inspecionarTurma(state, turma) {
     if (!turma.sala || !turma.horario || !turma.aulas || turma.aulas.length === 0) {
         const falta = [!turma.horario || !turma.aulas?.length ? "horário" : null, !turma.sala ? "sala" : null,
@@ -413,10 +456,6 @@ function inspecionarTurma(state, turma) {
     if (!espaco) {
         problemas.push({ tipo: "sala", categoria: "Espaço", resumoCurto: "Espaço inexistente", detalhe: `O espaço ${turma.sala} não existe.`, afetadas: [turma] });
     } else {
-        if (espaco.status !== "Disponível") {
-            problemas.push({ tipo: "sala", categoria: "Espaço", resumoCurto: "Espaço indisponível",
-                detalhe: `${espaco.nome} está em ${espaco.status.toLowerCase()} (marcado nesta sessão).`, afetadas: [turma] });
-        }
         for (const v of D.validador.diagnosticarViolacoes(turmaApi(state, turma), salaApi(espaco), ctx.alocacoes, turma.horario)) {
             problemas.push(problemaDe(state, turma, espaco, v, ctx));
         }
@@ -631,17 +670,6 @@ async function descartarRascunho(state) {
 
 /** Configurações que só existem no navegador (sem colunas equivalentes no banco). */
 function preservarLocais(antigo, novo) {
-    for (const e of novo.espacos) {
-        const a = antigo.espacos.find((x) => x.id === e.id);
-        if (a) {
-            Object.assign(e, {
-                status: a.status,
-                equipamentos: a.equipamentos,
-                observacao: a.observacao,
-                pcs: a.pcs,
-            });
-        }
-    }
     for (const e of antigo.espacos) {
         if (e.apiId == null && !novo.espacos.some((x) => x.id === e.id)) novo.espacos.push(e);
     }
@@ -662,29 +690,28 @@ function preservarLocais(antigo, novo) {
     for (const p of novo.professores) {
         const a = antigo.professores.find((x) => x.siape === p.siape);
         if (a) {
-            const pref = {};
-            for (const [k, v] of Object.entries(a.disponibilidade || {})) {
-                if (v === "preferencial" && p.disponibilidade[k] !== "indisponivel") pref[k] = "preferencial";
-            }
-            Object.assign(p.disponibilidade, pref);
-            Object.assign(p, { regime: a.regime, cargaMax: a.cargaMax });
+            if (p.regime === "—" && a.regime && a.regime !== "—") p.regime = a.regime;
+            if (p.cargaMax == null && a.cargaMax != null) p.cargaMax = a.cargaMax;
         }
     }
-    novo.publicada = antigo.publicada;
-    novo.permitirMudarFormato = antigo.permitirMudarFormato || {};
+    novo.permitirMudarFormato = { ...(antigo.permitirMudarFormato || {}), ...(novo.permitirMudarFormato || {}) };
 }
 
 /* ==========================================================================
-   Persistência de cadastros no PostgreSQL (salas, turmas, disciplinas, restrições)
+   Persistência de cadastros no PostgreSQL (salas, turmas, disciplinas, disponibilidade, publicação)
    ========================================================================== */
 
-async function criarEspaco({ nome, capacidade, tipo, bloco, alocavelIc = true }) {
+async function criarEspaco({ nome, capacidade, tipo, bloco, alocavelIc = true, status = "Disponível", pcs = 0, equipamentos = [], observacao }) {
     const { corpo } = await requisitar("POST", "/api/salas", {
         nome,
         capacidade,
         tipoEspaco: tipo,
         bloco: bloco || "IC",
         alocavelIc,
+        status,
+        pcs,
+        equipamentos,
+        ...(observacao !== undefined ? { observacao } : {}),
     });
     return {
         id: String(corpo.id),
@@ -695,16 +722,24 @@ async function criarEspaco({ nome, capacidade, tipo, bloco, alocavelIc = true })
         tipo: corpo.tipoEspaco,
         capacidade: corpo.capacidade,
         alocavelIc: corpo.alocavelIc,
+        status: corpo.status || status,
+        pcs: corpo.pcs != null ? corpo.pcs : pcs,
+        equipamentos: Array.isArray(corpo.equipamentos) ? corpo.equipamentos : equipamentos,
+        observacao: corpo.observacao != null ? corpo.observacao : (observacao || "Pool de salas do IC."),
     };
 }
 
-async function atualizarEspaco(apiId, { nome, capacidade, tipo, bloco, alocavelIc }) {
+async function atualizarEspaco(apiId, { nome, capacidade, tipo, bloco, alocavelIc, status, pcs, equipamentos, observacao }) {
     const payload = {
         nome,
         capacidade,
         tipoEspaco: tipo,
         bloco: bloco || "IC",
         ...(alocavelIc !== undefined ? { alocavelIc } : {}),
+        ...(status !== undefined ? { status } : {}),
+        ...(pcs !== undefined ? { pcs } : {}),
+        ...(equipamentos !== undefined ? { equipamentos } : {}),
+        ...(observacao !== undefined ? { observacao } : {}),
     };
     const { corpo } = await requisitar("PUT", `/api/salas/${encodeURIComponent(apiId)}`, payload);
     return {
@@ -716,19 +751,60 @@ async function atualizarEspaco(apiId, { nome, capacidade, tipo, bloco, alocavelI
         tipo: corpo.tipoEspaco,
         capacidade: corpo.capacidade,
         alocavelIc: corpo.alocavelIc,
+        status: corpo.status || status || "Disponível",
+        pcs: corpo.pcs != null ? corpo.pcs : (pcs ?? 0),
+        equipamentos: Array.isArray(corpo.equipamentos) ? corpo.equipamentos : (equipamentos ?? []),
+        observacao: corpo.observacao,
     };
 }
 
-async function salvarIndisponibilidadeDocente(siape, chaveSlot, indisponivel) {
+async function salvarDisponibilidadeDocente(siape, chaveSlot, estado) {
     const [dia, aula] = String(chaveSlot).split(":");
     const horario = `${dia}-${aula[0]}-${aula.slice(1)}`;
-    if (indisponivel) {
-        await requisitar("POST", `/api/professores/${encodeURIComponent(siape)}/restricoes`, {
-            horarioIndisponivel: horario,
-        });
-    } else {
-        await requisitar("DELETE", `/api/professores/${encodeURIComponent(siape)}/restricoes/${encodeURIComponent(horario)}`);
+    await requisitar("PUT", `/api/professores/${encodeURIComponent(siape)}/disponibilidade`, {
+        horario,
+        estado,
+    });
+}
+
+async function salvarIndisponibilidadeDocente(siape, chaveSlot, indisponivel) {
+    await salvarDisponibilidadeDocente(siape, chaveSlot, indisponivel ? "indisponivel" : "disponivel");
+}
+
+async function salvarConfigMotorTurma(state, turmaId, permitirMudarFormato) {
+    const id = Number(turmaId);
+    const { corpo } = await requisitar("PATCH", `/api/turmas/${encodeURIComponent(id)}/motor`, {
+        permitirMudarFormato: Boolean(permitirMudarFormato),
+    });
+    if (!state.permitirMudarFormato) state.permitirMudarFormato = {};
+    if (permitirMudarFormato) state.permitirMudarFormato[id] = true;
+    else delete state.permitirMudarFormato[id];
+    const t = state.turmas.find((x) => x.apiId === id);
+    if (t) t.permitirMudarFormato = Boolean(permitirMudarFormato);
+    return corpo;
+}
+
+async function atualizarProfessor(siape, { nome, regime, cargaMax }) {
+    const payload = {
+        ...(nome !== undefined ? { nome } : {}),
+        ...(regime !== undefined ? { regime } : {}),
+        ...(cargaMax !== undefined ? { cargaMax } : {}),
+    };
+    const { corpo } = await requisitar("PUT", `/api/professores/${encodeURIComponent(siape)}`, payload);
+    return corpo;
+}
+
+async function publicarGrade(state) {
+    const { corpo } = await requisitar("POST", "/api/alocacoes/publicar", {
+        semestre: state.semestre,
+    });
+    state.publicada = true;
+    for (const t of state.turmas) {
+        if (t.sala && t.horario && t.status === "RASCUNHO") {
+            t.status = "DEFINITIVA";
+        }
     }
+    return corpo;
 }
 
 async function atualizarTurma(state, turma, { disciplina, professoresIds, alunos, exigeLaboratorio }) {
@@ -897,7 +973,11 @@ window.SATIC_DATA = {
     calcularCargaDocente,
     criarEspaco,
     atualizarEspaco,
+    salvarDisponibilidadeDocente,
     salvarIndisponibilidadeDocente,
+    atualizarProfessor,
     atualizarTurma,
+    salvarConfigMotorTurma,
+    publicarGrade,
     dominio: () => D
 };

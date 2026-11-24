@@ -1273,6 +1273,10 @@
                         <option value="Indisponível" ${esp.status === "Indisponível" ? "selected" : ""}>Indisponível</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label class="form-label" for="inp-esp-obs">Observação</label>
+                    <input type="text" id="inp-esp-obs" class="control-input" value="${escapar(esp.observacao || "")}" placeholder="Ex.: Pool de salas do IC">
+                </div>
             </form>
         `;
     }
@@ -1457,6 +1461,12 @@
                             <option value="Sala" ${turma.ambienteExigido === "Sala" ? "selected" : ""}>Sala</option>
                             <option value="Auditório" ${turma.ambienteExigido === "Auditório" ? "selected" : ""}>Auditório</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="radio-option">
+                            <input type="checkbox" id="inp-turma-formato" ${turma.permitirMudarFormato ? "checked" : ""}>
+                            <span>Permitir que o motor mude o formato dos blocos (ex.: 2+2 → 4 num dia)</span>
+                        </label>
                     </div>
                 </form>
             `;
@@ -2268,10 +2278,16 @@
                 } else if (conflitos.length > 0 || pendentes) {
                     mostrarToast(`Resolva os ${conflitos.length} conflitos críticos antes de publicar a grade.`);
                 } else {
-                    appState.dados.publicada = true;
-                    assinaturaPublicada = assinaturaDados();
-                    renderizarConflitosEPublicacao();
-                    mostrarToast("Proposta marcada como publicada nesta sessão.");
+                    (async () => {
+                        try {
+                            await SATIC_DATA.publicarGrade(appState.dados);
+                            assinaturaPublicada = assinaturaDados();
+                            renderizarTudo();
+                            mostrarToast("Grade oficial publicada e congelada no banco de dados.");
+                        } catch (err) {
+                            mostrarToast(`Erro ao publicar grade: ${err.message || "falha na API"}`);
+                        }
+                    })();
                 }
                 return;
             }
@@ -2351,6 +2367,7 @@
                         : [];
                     const novoAmbiente = document.getElementById("inp-turma-amb").value;
                     const exigeLab = novoAmbiente === "Laboratório";
+                    const permitirMudarFormato = Boolean(document.getElementById("inp-turma-formato")?.checked);
 
                     (async () => {
                         try {
@@ -2361,6 +2378,11 @@
                                     alunos,
                                     exigeLaboratorio: exigeLab,
                                 });
+                                if (Boolean(turma.permitirMudarFormato) !== permitirMudarFormato) {
+                                    await SATIC_DATA.salvarConfigMotorTurma(appState.dados, turma.apiId, permitirMudarFormato);
+                                }
+                            } else {
+                                turma.permitirMudarFormato = permitirMudarFormato;
                             }
                             turma.disciplina = disciplina;
                             turma.professor = novoProf;
@@ -2420,11 +2442,10 @@
                     prof.disponibilidade[key] = proximo;
                     renderizarTudo();
 
-                    const mudouIndisp = atual === "indisponivel" || proximo === "indisponivel";
-                    if (mudouIndisp && prof.siape) {
+                    if (prof.siape) {
                         (async () => {
                             try {
-                                await SATIC_DATA.salvarIndisponibilidadeDocente(prof.siape, key, proximo === "indisponivel");
+                                await SATIC_DATA.salvarDisponibilidadeDocente(prof.siape, key, proximo);
                                 mostrarToast(`Horário ${key.replace(":", " ")} salvo como ${proximo}.`);
                             } catch (err) {
                                 prof.disponibilidade[key] = atual;
@@ -2699,6 +2720,8 @@
             .map((s) => s.trim())
             .filter(Boolean);
         const status = document.getElementById("inp-esp-status").value;
+        const observacaoEl = document.getElementById("inp-esp-obs");
+        const observacao = observacaoEl ? observacaoEl.value.trim() : undefined;
 
         if (!nome || !Number.isInteger(capacidade) || capacidade <= 0 || !Number.isInteger(pcs) || pcs < 0) {
             mostrarToast('Informe nome, capacidade positiva e uma quantidade válida de PCs.');
@@ -2717,14 +2740,14 @@
                     tipo,
                     bloco: codigo || "IC",
                     alocavelIc: true,
+                    status,
+                    pcs,
+                    equipamentos,
+                    observacao,
                 });
                 const novo = {
                     ...salvo,
-                    pcs,
-                    equipamentos,
-                    status,
                     pavimento: salvo.bloco,
-                    observacao: "Pool de salas do IC.",
                 };
                 appState.dados.espacos.push(novo);
                 appState.espacos.espacoSelecionadoId = novo.id;
@@ -2739,6 +2762,10 @@
                             tipo,
                             bloco: codigo || esp.bloco || "IC",
                             alocavelIc: esp.alocavelIc,
+                            status,
+                            pcs,
+                            equipamentos,
+                            observacao,
                         });
                         Object.assign(esp, atualizado);
                     } else {
@@ -2747,10 +2774,11 @@
                         esp.bloco = codigo || esp.bloco;
                         esp.tipo = tipo;
                         esp.capacidade = capacidade;
+                        esp.pcs = pcs;
+                        esp.equipamentos = equipamentos;
+                        esp.status = status;
+                        if (observacao !== undefined) esp.observacao = observacao;
                     }
-                    esp.pcs = pcs;
-                    esp.equipamentos = equipamentos;
-                    esp.status = status;
                     mostrarToast(`Espaço ${nome} atualizado no banco.`);
                 }
             }
@@ -2788,8 +2816,8 @@
         mostrarStatusApi("carregando");
         try {
             const novo = await window.SATIC_DATA.carregar(appState.dados.semestre || "2026.2");
-            if (appState.dados.carregado) novo.publicada = appState.dados.publicada;
             appState.dados = novo;
+            if (novo.publicada) assinaturaPublicada = assinaturaDados();
             appState.matriz.turmaEmMovimentoId = null;
             mostrarStatusApi("ok");
             renderizarTudo();
