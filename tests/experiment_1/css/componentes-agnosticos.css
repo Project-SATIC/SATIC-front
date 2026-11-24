@@ -1,0 +1,653 @@
+/* ==========================================================================
+   SATIC - Sistema de Alocação de Turmas (Instituto de Computação - UFAL)
+   Arquivo: componentes-agnosticos.css
+   Objetivo: Componentes estruturais universais reutilizáveis em todas as telas.
+   Diretriz: Nomenclatura estrutural descritiva da função lógica do componente.
+   ========================================================================== */
+
+/* 1. ESTRUTURA DA JANELA PRINCIPAL */
+.janela-aplicacao {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--cor-fundo-janela);
+  overflow: hidden;
+}
+
+/* 2. BARRA DE TÍTULO DA APLICAÇÃO */
+.barra-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px var(--espacamento-md);
+  background-color: var(--cor-fundo-cabecalho);
+  color: var(--cor-texto-invertido);
+  user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.barra-titulo-esquerda {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-sm);
+}
+
+.icone-aplicacao {
+  width: 22px;
+  height: 22px;
+  background-color: var(--cor-primaria);
+  border-radius: var(--raio-borda-padrao);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--tamanho-texto-pequeno);
+  color: #ffffff;
+}
+
+.titulo-sistema {
+  font-size: var(--tamanho-texto-destaque);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.subtitulo-sistema {
+  font-size: var(--tamanho-texto-pequeno);
+  color: #94a3b8;
+  margin-left: var(--espacamento-xs);
+  padding-left: var(--espacamento-sm);
+  border-left: 1px solid #475569;
+}
+
+.barra-titulo-direita {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-md);
+}
+
+.indicador-contexto-ativo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: var(--raio-borda-padrao);
+  font-size: var(--tamanho-texto-micro);
+  color: #e2e8f0;
+}
+
+/* 3. BARRA DE MENU E NAVEGAÇÃO SUPERIOR */
+.barra-menu {
+  display: flex;
+  align-items: center;
+  background-color: #1e293b;
+  padding: 0 var(--espacamento-sm);
+  border-bottom: 1px solid #334155;
+  user-select: none;
+  overflow-x: auto;
+}
+
+.item-menu {
+  padding: 8px var(--espacamento-md);
+  font-size: var(--tamanho-texto-pequeno);
+  color: #cbd5e1;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item-menu:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.item-menu.ativo {
+  color: #ffffff;
+  border-bottom-color: var(--cor-primaria);
+  background-color: rgba(2, 132, 199, 0.18);
+  font-weight: 600;
+}
+
+.contador-menu {
+  background-color: var(--cor-alerta-critico-base);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+
+/* 4. BARRA DE FERRAMENTAS */
+.barra-ferramentas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  background-color: var(--cor-fundo-superficie);
+  border-bottom: 1px solid var(--cor-borda-suave);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  gap: var(--espacamento-md);
+  flex-wrap: wrap;
+}
+
+.grupo-ferramentas {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-sm);
+  flex-wrap: wrap;
+}
+
+.divisor-ferramentas {
+  width: 1px;
+  height: 22px;
+  background-color: var(--cor-borda-suave);
+  margin: 0 var(--espacamento-xs);
+}
+
+/* 5. CONTÊINER PRINCIPAL E PAINÉIS DIVISORES */
+.conteiner-principal {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.painel-divisor {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.painel-lateral-dock {
+  width: 310px;
+  min-width: 270px;
+  max-width: 420px;
+  background-color: var(--cor-fundo-painel);
+  border-right: 1px solid var(--cor-borda-suave);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.painel-conteudo-central {
+  flex: 1;
+  background-color: var(--cor-fundo-janela);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.separador-redimensionavel {
+  width: 4px;
+  background-color: var(--cor-borda-suave);
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.separador-redimensionavel:hover {
+  background-color: var(--cor-primaria);
+}
+
+/* 6. BLOCOS DE CONTEÚDO E SUPERFÍCIES */
+.cartao-superficie {
+  background-color: var(--cor-fundo-superficie);
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--raio-borda-padrao);
+  box-shadow: var(--sombra-superficie);
+}
+
+.cabecalho-bloco {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  background-color: #f8fafc;
+  border-bottom: 1px solid var(--cor-borda-suave);
+}
+
+.titulo-bloco {
+  font-size: var(--tamanho-texto-destaque);
+  font-weight: 600;
+  color: var(--cor-texto-principal);
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-xs);
+}
+
+.corpo-bloco {
+  padding: var(--espacamento-md);
+}
+
+/* 7. AGRUPAMENTO DE CAMPOS EM BLOCOS LÓGICOS */
+.agrupamento-campos {
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--raio-borda-padrao);
+  padding: var(--espacamento-md);
+  margin-bottom: var(--espacamento-md);
+  background-color: var(--cor-fundo-superficie);
+}
+
+.legenda-agrupamento {
+  font-weight: 700;
+  font-size: var(--tamanho-texto-pequeno);
+  color: var(--cor-texto-secundario);
+  padding: 0 var(--espacamento-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 8. CONTROLES DE FORMULÁRIO (INPUTS, SELETORES, RÓTULOS) */
+.grade-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--espacamento-md);
+}
+
+.grade-campos-duas-colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacamento-md);
+}
+
+.grade-campos-tres-colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--espacamento-md);
+}
+
+.grade-campos-quatro-colunas {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--espacamento-md);
+}
+
+.linha-formulario {
+  display: flex;
+  gap: var(--espacamento-md);
+  margin-bottom: var(--espacamento-sm);
+  align-items: flex-start;
+}
+
+.campo-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.rotulo-campo {
+  font-size: var(--tamanho-texto-pequeno);
+  font-weight: 600;
+  color: var(--cor-texto-secundario);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.campo-obrigatorio {
+  color: var(--cor-alerta-critico-base);
+  font-weight: bold;
+}
+
+.entrada-texto,
+.seletor-opcao,
+.area-texto {
+  padding: 6px var(--espacamento-sm);
+  font-family: var(--fonte-sistema);
+  font-size: var(--tamanho-texto-padrao);
+  color: var(--cor-texto-principal);
+  background-color: #ffffff;
+  border: 1px solid var(--cor-borda-padrao);
+  border-radius: var(--raio-borda-padrao);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.entrada-texto:focus,
+.seletor-opcao:focus,
+.area-texto:focus {
+  border-color: var(--cor-primaria);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.entrada-texto::placeholder {
+  color: var(--cor-texto-mutado);
+}
+
+.entrada-texto:disabled,
+.seletor-opcao:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.dica-campo {
+  font-size: var(--tamanho-texto-micro);
+  color: var(--cor-texto-mutado);
+  margin-top: 2px;
+}
+
+/* Controles de Seleção (Checkboxes e Radios) */
+.agrupamento-seletores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacamento-md);
+  margin-top: var(--espacamento-xs);
+}
+
+.opcao-selecao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: var(--tamanho-texto-padrao);
+  color: var(--cor-texto-principal);
+  user-select: none;
+}
+
+.caixa-selecao,
+.botao-radio {
+  accent-color: var(--cor-primaria);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+/* 9. BOTÕES E AGRUPAMENTO DE AÇÕES */
+.agrupamento-botoes {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-sm);
+  flex-wrap: wrap;
+}
+
+.agrupamento-botoes-fim {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--espacamento-sm);
+  margin-top: var(--espacamento-md);
+  padding-top: var(--espacamento-md);
+  border-top: 1px solid var(--cor-borda-suave);
+}
+
+.botao-acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px var(--espacamento-md);
+  font-family: var(--fonte-sistema);
+  font-size: var(--tamanho-texto-pequeno);
+  font-weight: 600;
+  border-radius: var(--raio-borda-padrao);
+  border: 1px solid var(--cor-borda-padrao);
+  background-color: #ffffff;
+  color: var(--cor-texto-principal);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.botao-acao:hover {
+  background-color: #f1f5f9;
+  border-color: var(--cor-borda-forte);
+}
+
+.botao-acao:active {
+  background-color: #e2e8f0;
+}
+
+.botao-primario {
+  background-color: var(--cor-primaria);
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.botao-primario:hover {
+  background-color: var(--cor-primaria-hover);
+  border-color: #0369a1;
+}
+
+.botao-perigo {
+  background-color: #ffffff;
+  border-color: var(--cor-alerta-critico-borda);
+  color: var(--cor-alerta-critico-texto);
+}
+
+.botao-perigo:hover {
+  background-color: var(--cor-alerta-critico-fundo);
+  border-color: var(--cor-alerta-critico-base);
+}
+
+.botao-sucesso {
+  background-color: var(--cor-alerta-sucesso-base);
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.botao-sucesso:hover {
+  background-color: #15803d;
+}
+
+.botao-icone {
+  padding: 5px 8px;
+}
+
+/* 10. EMBLEMAS DE STATUS (BADGES) */
+.emblema-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: var(--tamanho-texto-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.emblema-critico {
+  background-color: var(--cor-alerta-critico-fundo);
+  color: var(--cor-alerta-critico-texto);
+  border-color: var(--cor-alerta-critico-borda);
+}
+
+.emblema-infra {
+  background-color: var(--cor-alerta-infra-fundo);
+  color: var(--cor-alerta-infra-texto);
+  border-color: var(--cor-alerta-infra-borda);
+}
+
+.emblema-aviso {
+  background-color: var(--cor-alerta-aviso-fundo);
+  color: var(--cor-alerta-aviso-texto);
+  border-color: var(--cor-alerta-aviso-borda);
+}
+
+.emblema-sucesso {
+  background-color: var(--cor-alerta-sucesso-fundo);
+  color: var(--cor-alerta-sucesso-texto);
+  border-color: var(--cor-alerta-sucesso-borda);
+}
+
+.emblema-neutro {
+  background-color: #f1f5f9;
+  color: #475569;
+  border-color: var(--cor-borda-suave);
+}
+
+/* 11. CARTÕES DE ALERTA ESTRUTURADOS */
+.cartao-alerta {
+  border-radius: var(--raio-borda-padrao);
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  margin-bottom: var(--espacamento-sm);
+  display: flex;
+  gap: var(--espacamento-sm);
+  font-size: var(--tamanho-texto-pequeno);
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.cartao-alerta-critico {
+  background-color: var(--cor-alerta-critico-fundo);
+  border-color: var(--cor-alerta-critico-borda);
+  border-left-color: var(--cor-alerta-critico-base);
+  color: var(--cor-alerta-critico-texto);
+}
+
+.cartao-alerta-infra {
+  background-color: var(--cor-alerta-infra-fundo);
+  border-color: var(--cor-alerta-infra-borda);
+  border-left-color: var(--cor-alerta-infra-base);
+  color: var(--cor-alerta-infra-texto);
+}
+
+.cartao-alerta-aviso {
+  background-color: var(--cor-alerta-aviso-fundo);
+  border-color: var(--cor-alerta-aviso-borda);
+  border-left-color: var(--cor-alerta-aviso-base);
+  color: var(--cor-alerta-aviso-texto);
+}
+
+.cartao-alerta-sucesso {
+  background-color: var(--cor-alerta-sucesso-fundo);
+  border-color: var(--cor-alerta-sucesso-borda);
+  border-left-color: var(--cor-alerta-sucesso-base);
+  color: var(--cor-alerta-sucesso-texto);
+}
+
+.icone-alerta {
+  font-weight: bold;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.conteudo-alerta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.titulo-alerta {
+  font-weight: 700;
+}
+
+/* 12. TABELAS DE DADOS */
+.conteiner-tabela {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--cor-borda-suave);
+  background-color: #ffffff;
+}
+
+.tabela-dados {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tamanho-texto-padrao);
+  text-align: left;
+}
+
+.tabela-dados th {
+  background-color: #f1f5f9;
+  color: var(--cor-texto-secundario);
+  font-weight: 600;
+  font-size: var(--tamanho-texto-pequeno);
+  padding: 8px var(--espacamento-sm);
+  border-bottom: 1px solid var(--cor-borda-padrao);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tabela-dados td {
+  padding: 8px var(--espacamento-sm);
+  border-bottom: 1px solid var(--cor-borda-suave);
+  color: var(--cor-texto-principal);
+}
+
+.tabela-dados tr {
+  cursor: pointer;
+}
+
+.tabela-dados tr:hover td {
+  background-color: #f8fafc;
+}
+
+.tabela-dados tr.linha-selecionada td {
+  background-color: var(--cor-primaria-clara);
+}
+
+/* 13. BARRA DE PROGRESSO E OCUPAÇÃO */
+.barra-progresso-conteiner {
+  width: 100%;
+  height: 8px;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.barra-progresso-preenchimento {
+  height: 100%;
+  background-color: var(--cor-primaria);
+  border-radius: 4px;
+}
+
+.barra-progresso-preenchimento.critico {
+  background-color: var(--cor-alerta-critico-base);
+}
+
+.barra-progresso-preenchimento.infra {
+  background-color: var(--cor-alerta-infra-base);
+}
+
+.barra-progresso-preenchimento.sucesso {
+  background-color: var(--cor-alerta-sucesso-base);
+}
+
+/* 14. BARRA DE STATUS INFERIOR */
+.barra-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px var(--espacamento-md);
+  background-color: var(--cor-fundo-barra-status);
+  color: #94a3b8;
+  font-size: var(--tamanho-texto-micro);
+  border-top: 1px solid #334155;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.barra-status-esquerda,
+.barra-status-direita {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-md);
+}
+
+.item-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ponto-status-ativo {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #22c55e;
+}

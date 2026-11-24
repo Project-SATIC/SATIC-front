@@ -1,0 +1,106 @@
+/* ==========================================================================
+   SATIC - Sistema de Alocação de Turmas (Instituto de Computação - UFAL)
+   Arquivo: base-agnostica.css
+   Objetivo: Definição de tokens de design, reset e variáveis estruturais.
+   ========================================================================== */
+
+:root {
+  /* Paleta Base Institucional & Superfícies */
+  --cor-fundo-janela: #f1f5f9;
+  --cor-fundo-superficie: #ffffff;
+  --cor-fundo-painel: #f8fafc;
+  --cor-fundo-destaque: #e2e8f0;
+  --cor-fundo-cabecalho: #0f172a;
+  --cor-fundo-barra-status: #1e293b;
+
+  /* Bordas e Divisores Estruturais */
+  --cor-borda-suave: #cbd5e1;
+  --cor-borda-padrao: #94a3b8;
+  --cor-borda-forte: #475569;
+  --raio-borda-padrao: 4px;
+  --raio-borda-arredondado: 6px;
+
+  /* Tipografia */
+  --fonte-sistema: "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Helvetica Neue", sans-serif;
+  --fonte-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  
+  --tamanho-texto-micro: 11px;
+  --tamanho-texto-pequeno: 12px;
+  --tamanho-texto-padrao: 13px;
+  --tamanho-texto-destaque: 14px;
+  --tamanho-texto-titulo: 16px;
+  --tamanho-texto-subtitulo: 18px;
+  --tamanho-texto-cabecalho: 20px;
+
+  /* Cores de Texto */
+  --cor-texto-principal: #0f172a;
+  --cor-texto-secundario: #475569;
+  --cor-texto-mutado: #64748b;
+  --cor-texto-invertido: #ffffff;
+
+  /* Cores de Ação */
+  --cor-primaria: #0284c7;
+  --cor-primaria-hover: #0369a1;
+  --cor-primaria-clara: #e0f2fe;
+
+  /* Semântica de Validação de Restrições (Timetabling) */
+  /* 1. Choque Crítico (Duplicação de Horário / Choque de Docente / Choque de Sala) */
+  --cor-alerta-critico-base: #dc2626;
+  --cor-alerta-critico-fundo: #fef2f2;
+  --cor-alerta-critico-borda: #f87171;
+  --cor-alerta-critico-texto: #991b1b;
+
+  /* 2. Incompatibilidade de Infraestrutura (Déficit de capacidade / Sala sem PCs para lab) */
+  --cor-alerta-infra-base: #ea580c;
+  --cor-alerta-infra-fundo: #fff7ed;
+  --cor-alerta-infra-borda: #fb923c;
+  --cor-alerta-infra-texto: #9a3412;
+
+  /* 3. Aviso / Restrição Suave (Fora da preferência do docente / Sala sem ar-condicionado) */
+  --cor-alerta-aviso-base: #d97706;
+  --cor-alerta-aviso-fundo: #fffbeb;
+  --cor-alerta-aviso-borda: #fcd34d;
+  --cor-alerta-aviso-texto: #92400e;
+
+  /* 4. Sucesso / Alocação Válida */
+  --cor-alerta-sucesso-base: #16a34a;
+  --cor-alerta-sucesso-fundo: #f0fdf4;
+  --cor-alerta-sucesso-borda: #86efac;
+  --cor-alerta-sucesso-texto: #166534;
+
+  /* Espaçamentos Estruturais */
+  --espacamento-xxs: 2px;
+  --espacamento-xs: 4px;
+  --espacamento-sm: 8px;
+  --espacamento-md: 12px;
+  --espacamento-lg: 16px;
+  --espacamento-xl: 24px;
+
+  /* Elevação e Sombras */
+  --sombra-superficie: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --sombra-janela-flutuante: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Reset Estrutural */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  font-family: var(--fonte-sistema);
+  font-size: var(--tamanho-texto-padrao);
+  color: var(--cor-texto-principal);
+  background-color: var(--cor-fundo-janela);
+  line-height: 1.4;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 1px;
+}

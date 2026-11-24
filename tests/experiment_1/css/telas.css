@@ -1,0 +1,878 @@
+/* ==========================================================================
+   SATIC - Sistema de Alocação de Turmas (Instituto de Computação - UFAL)
+   Arquivo: telas.css
+   Objetivo: Layouts estruturais para as 6 telas principais do SATIC:
+     1. Painel Geral & Diagnóstico do Semestre
+     2. Matriz de Alocação de Horários (Timetabling Grid)
+     3. Gestão de Espaços Físicos (Salas & Laboratórios)
+     4. Gestão de Turmas & Disciplinas
+     5. Gestão de Professores & Disponibilidade
+     6. Central de Conflitos (Anti-Efeito Dominó) & Publicação
+   ========================================================================== */
+
+/* Alternância de Telas no Protótipo */
+.tela-conteudo {
+  display: none;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tela-conteudo.ativa {
+  display: flex;
+}
+
+/* Badges nos Cartões de Horário */
+.badge-conflito-card {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.badge-choque-docente {
+  background-color: var(--cor-alerta-critico-base);
+  color: #ffffff;
+}
+
+.badge-deficit-capacidade {
+  background-color: var(--cor-alerta-infra-base);
+  color: #ffffff;
+}
+
+.badge-aviso-preferencia {
+  background-color: var(--cor-alerta-aviso-base);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   TELA 1: PAINEL GERAL & DIAGNÓSTICO DO SEMESTRE
+   ========================================================================== */
+.conteiner-painel-geral {
+  flex: 1;
+  padding: var(--espacamento-lg);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-lg);
+}
+
+.grade-indicadores-topo {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--espacamento-md);
+}
+
+.cartao-indicador {
+  background-color: var(--cor-fundo-superficie);
+  border: 1px solid var(--cor-borda-suave);
+  border-left: 4px solid var(--cor-primaria);
+  border-radius: var(--raio-borda-padrao);
+  padding: var(--espacamento-md);
+  box-shadow: var(--sombra-superficie);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.cartao-indicador.indicador-critico {
+  border-left-color: var(--cor-alerta-critico-base);
+}
+
+.cartao-indicador.indicador-infra {
+  border-left-color: var(--cor-alerta-infra-base);
+}
+
+.cartao-indicador.indicador-sucesso {
+  border-left-color: var(--cor-alerta-sucesso-base);
+}
+
+.topo-indicador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--tamanho-texto-pequeno);
+  font-weight: 600;
+  color: var(--cor-texto-secundario);
+}
+
+.valor-principal-indicador {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--cor-texto-principal);
+  line-height: 1.1;
+}
+
+.rodape-indicador {
+  font-size: var(--tamanho-texto-micro);
+  color: var(--cor-texto-mutado);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.grade-blocos-painel {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--espacamento-lg);
+}
+
+.coluna-blocos-painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-lg);
+}
+
+.lista-alertas-prioritarios {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-sm);
+}
+
+.item-alerta-prioritario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacamento-md);
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--raio-borda-padrao);
+  background-color: #ffffff;
+}
+
+.item-alerta-prioritario.borda-critica {
+  border-left: 4px solid var(--cor-alerta-critico-base);
+  background-color: var(--cor-alerta-critico-fundo);
+}
+
+.item-alerta-prioritario.borda-infra {
+  border-left: 4px solid var(--cor-alerta-infra-base);
+  background-color: var(--cor-alerta-infra-fundo);
+}
+
+.item-alerta-prioritario.borda-aviso {
+  border-left: 4px solid var(--cor-alerta-aviso-base);
+  background-color: var(--cor-alerta-aviso-fundo);
+}
+
+.grade-barras-ocupacao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-md);
+}
+
+.item-ocupacao-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cabecalho-ocupacao {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--tamanho-texto-pequeno);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   TELA 2: MATRIZ DE ALOCAÇÃO DE HORÁRIOS (TIMETABLING)
+   ========================================================================== */
+
+/* Fila de Turmas Pendentes (Sidebar Dock) */
+.fila-turmas-pendentes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-sm);
+  padding: var(--espacamento-md);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.item-turma-pendente {
+  background-color: var(--cor-fundo-superficie);
+  border: 1px solid var(--cor-borda-padrao);
+  border-left: 4px solid var(--cor-primaria);
+  border-radius: var(--raio-borda-padrao);
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  cursor: grab;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.item-turma-pendente:hover {
+  border-color: var(--cor-primaria);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.item-turma-pendente .codigo-turma {
+  font-weight: 700;
+  font-size: var(--tamanho-texto-pequeno);
+  color: var(--cor-primaria-hover);
+}
+
+.item-turma-pendente .nome-disciplina {
+  font-size: var(--tamanho-texto-padrao);
+  font-weight: 600;
+  margin: 2px 0 4px 0;
+}
+
+.item-turma-pendente .meta-turma {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--tamanho-texto-micro);
+  color: var(--cor-texto-secundario);
+}
+
+/* Painel de Diagnóstico de Conflitos */
+.painel-diagnostico-conflitos {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--cor-borda-suave);
+  padding: var(--espacamento-md);
+}
+
+.resumo-metricas-conflito {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacamento-xs);
+  margin-top: var(--espacamento-sm);
+}
+
+.cartao-metrica {
+  padding: var(--espacamento-xs) var(--espacamento-sm);
+  border-radius: var(--raio-borda-padrao);
+  display: flex;
+  flex-direction: column;
+}
+
+.cartao-metrica-critico {
+  background-color: var(--cor-alerta-critico-fundo);
+  border: 1px solid var(--cor-alerta-critico-borda);
+}
+
+.cartao-metrica-infra {
+  background-color: var(--cor-alerta-infra-fundo);
+  border: 1px solid var(--cor-alerta-infra-borda);
+}
+
+.valor-metrica {
+  font-size: var(--tamanho-texto-subtitulo);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.cartao-metrica-critico .valor-metrica {
+  color: var(--cor-alerta-critico-base);
+}
+
+.cartao-metrica-infra .valor-metrica {
+  color: var(--cor-alerta-infra-base);
+}
+
+.rotulo-metrica {
+  font-size: var(--tamanho-texto-micro);
+  color: var(--cor-texto-secundario);
+  font-weight: 600;
+}
+
+/* Área Central da Grade / Timetable Grid */
+.conteiner-matriz-alocacao {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+.barra-filtros-grade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  background-color: #f8fafc;
+  border-bottom: 1px solid var(--cor-borda-suave);
+  flex-wrap: wrap;
+  gap: var(--espacamento-sm);
+}
+
+.viewport-grade-scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.grade-dados-matriz {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 920px;
+}
+
+.grade-dados-matriz th,
+.grade-dados-matriz td {
+  border-right: 1px solid var(--cor-borda-suave);
+  border-bottom: 1px solid var(--cor-borda-suave);
+}
+
+.grade-dados-matriz th.cabecalho-coluna-horario {
+  background-color: #0f172a;
+  color: #ffffff;
+  padding: 8px var(--espacamento-sm);
+  font-weight: 600;
+  font-size: var(--tamanho-texto-pequeno);
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.grade-dados-matriz th.cabecalho-canto {
+  background-color: #0b1120;
+  width: 115px;
+  min-width: 115px;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 20;
+}
+
+.grade-dados-matriz td.cabecalho-linha-slot {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  font-size: var(--tamanho-texto-pequeno);
+  color: var(--cor-texto-secundario);
+  padding: var(--espacamento-sm);
+  text-align: center;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  border-right: 2px solid var(--cor-borda-padrao);
+}
+
+.cabecalho-linha-slot .codigo-slot {
+  font-family: var(--fonte-mono);
+  font-size: var(--tamanho-texto-destaque);
+  color: var(--cor-texto-principal);
+  display: block;
+}
+
+.cabecalho-linha-slot .intervalo-slot {
+  font-size: var(--tamanho-texto-micro);
+  color: var(--cor-texto-mutado);
+  display: block;
+  margin-top: 2px;
+}
+
+.celula-horario {
+  height: 94px;
+  vertical-align: top;
+  padding: 4px;
+  background-color: #ffffff;
+  position: relative;
+  transition: background-color 0.15s;
+}
+
+.celula-horario:hover {
+  background-color: #f8fafc;
+}
+
+/* Cartões de Alocação Dentro das Células */
+.cartao-alocacao {
+  height: 100%;
+  width: 100%;
+  border-radius: var(--raio-borda-padrao);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid var(--cor-borda-padrao);
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.cartao-alocacao:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  z-index: 2;
+}
+
+.cartao-alocacao-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.cartao-alocacao .turma-codigo {
+  font-weight: 700;
+  font-size: var(--tamanho-texto-pequeno);
+  line-height: 1.1;
+}
+
+.cartao-alocacao .disciplina-nome {
+  font-size: var(--tamanho-texto-micro);
+  font-weight: 600;
+  color: var(--cor-texto-principal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.cartao-alocacao .docente-nome {
+  font-size: var(--tamanho-texto-micro);
+  color: var(--cor-texto-secundario);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cartao-alocacao-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: var(--tamanho-texto-micro);
+}
+
+.sala-alocada {
+  font-family: var(--fonte-mono);
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background-color: #e2e8f0;
+}
+
+/* Modificadores de Estado dos Cartões */
+.cartao-alocacao-valida {
+  border-left: 4px solid var(--cor-alerta-sucesso-base);
+  background-color: #ffffff;
+}
+
+.cartao-alocacao-choque {
+  border: 1.5px solid var(--cor-alerta-critico-base);
+  border-left: 5px solid var(--cor-alerta-critico-base);
+  background-color: var(--cor-alerta-critico-fundo);
+  animation: bordaPulsante 2s infinite ease-in-out;
+}
+
+.cartao-alocacao-choque .turma-codigo {
+  color: var(--cor-alerta-critico-texto);
+}
+
+@keyframes bordaPulsante {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3);
+  }
+}
+
+.cartao-alocacao-infra {
+  border: 1.5px solid var(--cor-alerta-infra-base);
+  border-left: 5px solid var(--cor-alerta-infra-base);
+  background-color: var(--cor-alerta-infra-fundo);
+}
+
+.cartao-alocacao-infra .turma-codigo {
+  color: var(--cor-alerta-infra-texto);
+}
+
+.cartao-alocacao-aviso {
+  border: 1.5px solid var(--cor-alerta-aviso-base);
+  border-left: 5px solid var(--cor-alerta-aviso-base);
+  background-color: var(--cor-alerta-aviso-fundo);
+}
+
+/* Célula Vazia de Horário (Slot Livre) */
+.slot-vazio-guia {
+  height: 100%;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--raio-borda-padrao);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: var(--tamanho-texto-micro);
+  opacity: 0.65;
+}
+
+.slot-vazio-guia:hover {
+  border-color: var(--cor-primaria);
+  color: var(--cor-primaria);
+  opacity: 1;
+  background-color: #f0f9ff;
+  cursor: pointer;
+}
+
+/* Painel de Inspeção / Detalhes do Conflito Ativo (Bottom Drawer) */
+.painel-gaveta-detalhes {
+  background-color: #ffffff;
+  border-top: 2px solid var(--cor-borda-padrao);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  max-height: 225px;
+  flex-shrink: 0;
+}
+
+.cabecalho-gaveta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px var(--espacamento-md);
+  background-color: #f1f5f9;
+  border-bottom: 1px solid var(--cor-borda-suave);
+  font-weight: 600;
+  font-size: var(--tamanho-texto-pequeno);
+}
+
+.corpo-gaveta-conflito {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: var(--espacamento-md);
+  gap: var(--espacamento-md);
+  overflow-y: auto;
+}
+
+.bloco-diagnostico-regras {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item-regra-violada {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--raio-borda-padrao);
+  font-size: var(--tamanho-texto-pequeno);
+}
+
+.item-regra-violada-critica {
+  background-color: var(--cor-alerta-critico-fundo);
+  color: var(--cor-alerta-critico-texto);
+  border: 1px solid var(--cor-alerta-critico-borda);
+}
+
+.item-regra-violada-infra {
+  background-color: var(--cor-alerta-infra-fundo);
+  color: var(--cor-alerta-infra-texto);
+  border: 1px solid var(--cor-alerta-infra-borda);
+}
+
+/* ==========================================================================
+   TELA 3: GESTÃO DE ESPAÇOS FÍSICOS (SALAS & LABORATÓRIOS)
+   ========================================================================== */
+.conteiner-gestao-salas {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.painel-lista-salas {
+  width: 42%;
+  min-width: 360px;
+  background-color: #ffffff;
+  border-right: 1px solid var(--cor-borda-padrao);
+  display: flex;
+  flex-direction: column;
+}
+
+.painel-formulario-sala {
+  flex: 1;
+  background-color: var(--cor-fundo-janela);
+  padding: var(--espacamento-lg);
+  overflow-y: auto;
+}
+
+.seletor-recursos-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: var(--espacamento-sm);
+  padding-top: var(--espacamento-xs);
+}
+
+.cartao-checkbox-recurso {
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--raio-borda-padrao);
+  padding: 8px var(--espacamento-sm);
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cartao-checkbox-recurso:hover {
+  border-color: var(--cor-primaria);
+  background-color: #f0f9ff;
+}
+
+.cartao-checkbox-recurso input:checked + span {
+  font-weight: 600;
+  color: var(--cor-primaria-hover);
+}
+
+/* ==========================================================================
+   TELA 4: GESTÃO DE TURMAS & DISCIPLINAS
+   ========================================================================== */
+.conteiner-gestao-turmas {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.painel-lista-turmas {
+  width: 340px;
+  min-width: 300px;
+  background-color: #ffffff;
+  border-right: 1px solid var(--cor-borda-padrao);
+  display: flex;
+  flex-direction: column;
+}
+
+.painel-formulario-turma {
+  flex: 1;
+  padding: var(--espacamento-lg);
+  overflow-y: auto;
+  background-color: var(--cor-fundo-janela);
+}
+
+.painel-resumo-validacao-turma {
+  width: 320px;
+  min-width: 280px;
+  background-color: #ffffff;
+  border-left: 1px solid var(--cor-borda-padrao);
+  padding: var(--espacamento-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-md);
+  overflow-y: auto;
+}
+
+.tabela-slots-preferenciais {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tamanho-texto-pequeno);
+  margin-top: var(--espacamento-xs);
+}
+
+.tabela-slots-preferenciais th,
+.tabela-slots-preferenciais td {
+  border: 1px solid var(--cor-borda-suave);
+  padding: 5px 6px;
+  text-align: center;
+}
+
+.tabela-slots-preferenciais th {
+  background-color: #f1f5f9;
+}
+
+.slot-preferencial-check {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-weight: 700;
+  font-size: var(--tamanho-texto-micro);
+}
+
+/* ==========================================================================
+   TELA 5: GESTÃO DE PROFESSORES & DISPONIBILIDADE
+   ========================================================================== */
+.conteiner-gestao-professores {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.painel-lista-professores {
+  width: 390px;
+  min-width: 340px;
+  background-color: #ffffff;
+  border-right: 1px solid var(--cor-borda-padrao);
+  display: flex;
+  flex-direction: column;
+}
+
+.painel-formulario-professor {
+  flex: 1;
+  padding: var(--espacamento-lg);
+  overflow-y: auto;
+  background-color: var(--cor-fundo-janela);
+}
+
+.grade-disponibilidade-docente {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tamanho-texto-pequeno);
+  margin-top: var(--espacamento-xs);
+}
+
+.grade-disponibilidade-docente th,
+.grade-disponibilidade-docente td {
+  border: 1px solid var(--cor-borda-suave);
+  padding: 6px;
+  text-align: center;
+}
+
+.grade-disponibilidade-docente th {
+  background-color: #0f172a;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.grade-disponibilidade-docente td.slot-rotulo {
+  background-color: #f1f5f9;
+  font-family: var(--fonte-mono);
+  font-weight: 700;
+  color: var(--cor-texto-principal);
+  width: 100px;
+}
+
+.celula-disp {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--tamanho-texto-micro);
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+.celula-disp:hover {
+  opacity: 0.85;
+}
+
+.disp-preferencial {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.disp-disponivel {
+  background-color: #f8fafc;
+  color: #475569;
+}
+
+.disp-indisponivel {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.disp-choque {
+  background-color: var(--cor-alerta-critico-fundo);
+  color: var(--cor-alerta-critico-texto);
+  border: 2px solid var(--cor-alerta-critico-base) !important;
+  font-weight: 700;
+}
+
+.disp-alocada {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   TELA 6: CENTRAL DE RESOLUÇÃO DE CONFLITOS & PUBLICAÇÃO
+   ========================================================================== */
+.conteiner-central-conflitos {
+  flex: 1;
+  padding: var(--espacamento-lg);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-lg);
+}
+
+.grade-conflitos-simulador {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: var(--espacamento-lg);
+}
+
+.lista-conflitos-ativos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-sm);
+}
+
+.item-conflito-selecionavel {
+  border: 1px solid var(--cor-borda-padrao);
+  border-left-width: 5px;
+  border-radius: var(--raio-borda-padrao);
+  padding: var(--espacamento-md);
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.item-conflito-selecionavel:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.item-conflito-selecionavel.selecionado {
+  outline: 2px solid var(--cor-primaria);
+  background-color: #f8fafc;
+}
+
+.item-conflito-selecionavel.severidade-critica {
+  border-left-color: var(--cor-alerta-critico-base);
+}
+
+.item-conflito-selecionavel.severidade-infra {
+  border-left-color: var(--cor-alerta-infra-base);
+}
+
+.item-conflito-selecionavel.severidade-aviso {
+  border-left-color: var(--cor-alerta-aviso-base);
+}
+
+.cartao-proposta-solucao {
+  border: 1px solid var(--cor-borda-suave);
+  border-left: 4px solid var(--cor-alerta-sucesso-base);
+  border-radius: var(--raio-borda-padrao);
+  padding: var(--espacamento-md);
+  background-color: #ffffff;
+  margin-bottom: var(--espacamento-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cartao-proposta-solucao.recomendada {
+  background-color: #f0fdf4;
+  border-color: #86efac;
+  border-left: 4px solid var(--cor-alerta-sucesso-base);
+}
+
+.grade-relatorios-exportacao {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--espacamento-md);
+}
+
+.cartao-relatorio {
+  background-color: #ffffff;
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--raio-borda-padrao);
+  padding: var(--espacamento-md);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--espacamento-sm);
+}
