@@ -1273,6 +1273,10 @@
                         <option value="Indisponível" ${esp.status === "Indisponível" ? "selected" : ""}>Indisponível</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label class="form-label" for="inp-esp-obs">Observação</label>
+                    <input type="text" id="inp-esp-obs" class="control-input" value="${escapar(esp.observacao || "")}" placeholder="Ex.: Pool de salas do IC">
+                </div>
             </form>
         `;
     }
@@ -1457,6 +1461,12 @@
                             <option value="Sala" ${turma.ambienteExigido === "Sala" ? "selected" : ""}>Sala</option>
                             <option value="Auditório" ${turma.ambienteExigido === "Auditório" ? "selected" : ""}>Auditório</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="radio-option">
+                            <input type="checkbox" id="inp-turma-formato" ${turma.permitirMudarFormato ? "checked" : ""}>
+                            <span>Permitir que o motor mude o formato dos blocos (ex.: 2+2 → 4 num dia)</span>
+                        </label>
                     </div>
                 </form>
             `;
@@ -2357,6 +2367,7 @@
                         : [];
                     const novoAmbiente = document.getElementById("inp-turma-amb").value;
                     const exigeLab = novoAmbiente === "Laboratório";
+                    const permitirMudarFormato = Boolean(document.getElementById("inp-turma-formato")?.checked);
 
                     (async () => {
                         try {
@@ -2367,6 +2378,11 @@
                                     alunos,
                                     exigeLaboratorio: exigeLab,
                                 });
+                                if (Boolean(turma.permitirMudarFormato) !== permitirMudarFormato) {
+                                    await SATIC_DATA.salvarConfigMotorTurma(appState.dados, turma.apiId, permitirMudarFormato);
+                                }
+                            } else {
+                                turma.permitirMudarFormato = permitirMudarFormato;
                             }
                             turma.disciplina = disciplina;
                             turma.professor = novoProf;
@@ -2704,6 +2720,8 @@
             .map((s) => s.trim())
             .filter(Boolean);
         const status = document.getElementById("inp-esp-status").value;
+        const observacaoEl = document.getElementById("inp-esp-obs");
+        const observacao = observacaoEl ? observacaoEl.value.trim() : undefined;
 
         if (!nome || !Number.isInteger(capacidade) || capacidade <= 0 || !Number.isInteger(pcs) || pcs < 0) {
             mostrarToast('Informe nome, capacidade positiva e uma quantidade válida de PCs.');
@@ -2725,6 +2743,7 @@
                     status,
                     pcs,
                     equipamentos,
+                    observacao,
                 });
                 const novo = {
                     ...salvo,
@@ -2746,6 +2765,7 @@
                             status,
                             pcs,
                             equipamentos,
+                            observacao,
                         });
                         Object.assign(esp, atualizado);
                     } else {
@@ -2757,6 +2777,7 @@
                         esp.pcs = pcs;
                         esp.equipamentos = equipamentos;
                         esp.status = status;
+                        if (observacao !== undefined) esp.observacao = observacao;
                     }
                     mostrarToast(`Espaço ${nome} atualizado no banco.`);
                 }
